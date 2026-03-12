@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pgtiler — Local Preview</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+        #sidebar {
+            width: 240px;
+            background: #16213e;
+            color: #e0e0e0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        #sidebar h1 { font-size: 15px; font-weight: 700; color: #7ec8e3; letter-spacing: 1px; }
+        #sidebar h2 { font-size: 10px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 14px; }
+
+        .layer-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 3px 0;
+        }
+        .layer-toggle input[type="checkbox"] { cursor: pointer; accent-color: #7ec8e3; }
+
+        .basemap-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 3px 0;
+        }
+        .basemap-option input[type="radio"] { cursor: pointer; accent-color: #7ec8e3; }
+
+        .swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+
+        #links { margin-top: auto; padding-top: 12px; border-top: 1px solid #2a2a4a; }
+        #links a { color: #7ec8e3; font-size: 11px; display: block; margin-bottom: 4px; }
+
+        #map { flex: 1; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>pgtiler</h1>
+
+        <!-- Section 1: External reference maps -->
+        <h2>External Maps</h2>
+
+        <label class="basemap-option">
+            <input type="radio" name="basemap" value="none">
+            None
+        </label>
+        <label class="basemap-option">
+            <input type="radio" name="basemap" value="street" checked>
+            Street (OpenFreeMap)
+        </label>
+        <label class="basemap-option">
+            <input type="radio" name="basemap" value="satellite">
+            Satellite (ESRI)
+        </label>
+        <label class="basemap-option">
+            <input type="radio" name="basemap" value="topo">
+            Topo (OpenTopoMap)
+        </label>
+        <label class="basemap-option">
+            <input type="radio" name="basemap" value="hillshade">
+            Hillshade (ESRI)
+        </label>
+
+        <!-- Section 2: Our styled maps from Martin -->
+        <h2>Squiggly Maps</h2>
+
+        <div id="squiggly-maps">
+            <div style="color:#888; font-size:11px;">Loading catalog...</div>
+        </div>
+
+        <!-- Section 3: Individual raw layers -->
+        <h2>Raw Squiggly Layers</h2>
+
+        <label class="layer-toggle" id="toggle-all-row" style="display:none;">
+            <input type="checkbox" id="toggle-all">
+            <span class="swatch" style="background:#7ec8e3;"></span>
+            <strong>All layers</strong>
+        </label>
+
+        <div id="layer-toggles">
+            <div style="color:#888; font-size:11px;">Loading catalog...</div>
+        </div>
+
+        <div id="links">
+            <a href="http://localhost:3000/catalog" target="_blank">Tile catalog</a>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        const MARTIN = 'http://localhost:3000';
+
+        const BASEMAPS = {
+            none: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e0e0e0' } }] },
+            street: 'https://tiles.openfreemap.org/styles/liberty',
+            satellite: {
+                version: 8,
+                sources: {
+                    'esri-satellite': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: '© Esri, Maxar, Earthstar Geographics',
+                        maxzoom: 19,
+                    },
+                },
+                layers: [{ id: 'esri-satellite', type: 'raster', source: 'esri-satellite' }],
+            },
+            topo: {
+                version: 8,
+                sources: {
+                    'opentopomap': {
+                        type: 'raster',
+                        tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '© OpenTopoMap (CC-BY-SA)',
+                        maxzoom: 17,
+                    },
+                },
+                layers: [{ id: 'opentopomap', type: 'raster', source: 'opentopomap' }],
+            },
+            hillshade: {
+                version: 8,
+                sources: {
+                    'esri-hillshade': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: '© Esri, USGS, NOAA',
+                        maxzoom: 16,
+                    },
+                },
+                layers: [{ id: 'esri-hillshade', type: 'raster', source: 'esri-hillshade' }],
+            },
+        };
+
+        // Palette for raw layer overlays
+        const COLORS = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990'];
+
+        // Each entry: { tileSourceId, sourceId, sourceLayer, layerId, color, visible }
+        const catalogEntries = [];
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: BASEMAPS.street,
+            center: [150.62, -33.9],
+            zoom: 9,
+            maxPitch: 85,
+            hash: true,
+        });
+
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
+        map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
+
+        // ── Add a single raw catalog layer to the map ───────────────────────
+        function addCatalogEntry(entry) {
+            if (!map.getSource(entry.sourceId)) {
+                map.addSource(entry.sourceId, { type: 'vector', url: `${MARTIN}/${entry.tileSourceId}` });
+            }
+            if (map.getLayer(entry.layerId)) return;
+
+            const vis = entry.visible ? 'visible' : 'none';
+            const base = {
+                id: entry.layerId,
+                source: entry.sourceId,
+                'source-layer': entry.sourceLayer,
+                layout: { visibility: vis },
+            };
+
+            const name = entry.sourceLayer;
+            if (['place', 'poi', 'aerodrome_label', 'mountain_peak', 'housenumber', 'water_name'].includes(name)) {
+                map.addLayer({ ...base, type: 'circle', paint: { 'circle-radius': 4, 'circle-color': entry.color, 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' } });
+            } else if (['transportation', 'transportation_name', 'waterway', 'aeroway', 'boundary'].includes(name)) {
+                map.addLayer({ ...base, type: 'line', paint: { 'line-color': entry.color, 'line-width': 1.5 } });
+            } else {
+                map.addLayer({ ...base, type: 'fill', paint: { 'fill-color': entry.color, 'fill-opacity': 0.3, 'fill-outline-color': entry.color } });
+            }
+        }
+
+        // ── Re-add raw overlay layers after style switch ────────────────────
+        function addOverlays() {
+            catalogEntries.forEach(addCatalogEntry);
+        }
+
+        map.on('style.load', addOverlays);
+
+        // ── Base map switcher (external maps) ───────────────────────────────
+        document.querySelectorAll('input[name="basemap"]').forEach(radio => {
+            radio.addEventListener('change', e => {
+                map.setStyle(BASEMAPS[e.target.value]);
+            });
+        });
+
+        // ── Fetch Martin catalog ────────────────────────────────────────────
+        const layerCheckboxes = [];
+
+        async function loadCatalog() {
+            const layerContainer = document.getElementById('layer-toggles');
+            const squigglyContainer = document.getElementById('squiggly-maps');
+            let tileSourceIds;
+            try {
+                const res = await fetch(`${MARTIN}/catalog`);
+                const catalog = await res.json();
+                if (catalog.tiles) {
+                    tileSourceIds = Object.keys(catalog.tiles);
+                } else if (Array.isArray(catalog)) {
+                    tileSourceIds = catalog.map(s => s.id);
+                } else {
+                    tileSourceIds = Object.keys(catalog);
+                }
+            } catch (err) {
+                const msg = '<div style="color:#f66;font-size:11px;">Could not reach Martin.<br>Is it running on :3000?</div>';
+                layerContainer.innerHTML = msg;
+                squigglyContainer.innerHTML = msg;
+                return;
+            }
+
+            if (tileSourceIds.length === 0) {
+                layerContainer.innerHTML = '<div style="color:#888;font-size:11px;">No sources found</div>';
+                squigglyContainer.innerHTML = '<div style="color:#888;font-size:11px;">No sources found</div>';
+                return;
+            }
+
+            layerContainer.innerHTML = '';
+            squigglyContainer.innerHTML = '';
+            let colorIdx = 0;
+
+            for (const tileSourceId of tileSourceIds) {
+                let vectorLayers = [];
+                let displayName = tileSourceId;
+                try {
+                    const tj = await fetch(`${MARTIN}/${tileSourceId}`);
+                    const tileJson = await tj.json();
+                    vectorLayers = tileJson.vector_layers || [];
+                    displayName = tileJson.name || tileSourceId;
+                } catch (_) { continue; }
+
+                if (vectorLayers.length === 0) continue;
+
+                // ── Squiggly Maps section: add styled basemap radio ─────
+                addSquigglyBasemap(tileSourceId, 'SquigglyOutdoorV1', squigglyContainer);
+
+                // ── Raw Squiggly Layers section: one toggle per sub-layer
+                for (const vl of vectorLayers) {
+                    const color = COLORS[colorIdx % COLORS.length];
+                    colorIdx++;
+
+                    const entry = {
+                        tileSourceId,
+                        sourceId: `catalog-${tileSourceId}`,
+                        sourceLayer: vl.id,
+                        layerId: `catalog-${tileSourceId}-${vl.id}`,
+                        color,
+                        visible: false,
+                    };
+                    catalogEntries.push(entry);
+
+                    const label = document.createElement('label');
+                    label.className = 'layer-toggle';
+                    label.innerHTML = `
+                        <input type="checkbox">
+                        <span class="swatch" style="background:${color};"></span>
+                        ${vl.id.replace(/_/g, ' ')}
+                    `;
+                    const checkbox = label.querySelector('input');
+                    layerCheckboxes.push({ checkbox, entry });
+
+                    checkbox.addEventListener('change', () => {
+                        entry.visible = checkbox.checked;
+                        if (entry.visible && !map.getLayer(entry.layerId)) {
+                            addCatalogEntry(entry);
+                        }
+                        if (map.getLayer(entry.layerId)) {
+                            map.setLayoutProperty(entry.layerId, 'visibility', entry.visible ? 'visible' : 'none');
+                        }
+                        syncToggleAll();
+                    });
+                    layerContainer.appendChild(label);
+                }
+            }
+
+            if (catalogEntries.length > 0) {
+                document.getElementById('toggle-all-row').style.display = 'flex';
+            }
+        }
+
+        // ── "All layers" toggle ─────────────────────────────────────────────
+        function syncToggleAll() {
+            const allOn = layerCheckboxes.length > 0 && layerCheckboxes.every(lc => lc.checkbox.checked);
+            const someOn = layerCheckboxes.some(lc => lc.checkbox.checked);
+            const toggle = document.getElementById('toggle-all');
+            toggle.checked = allOn;
+            toggle.indeterminate = someOn && !allOn;
+        }
+
+        document.getElementById('toggle-all').addEventListener('change', e => {
+            const on = e.target.checked;
+            for (const { checkbox, entry } of layerCheckboxes) {
+                checkbox.checked = on;
+                entry.visible = on;
+                if (on && !map.getLayer(entry.layerId)) {
+                    addCatalogEntry(entry);
+                }
+                if (map.getLayer(entry.layerId)) {
+                    map.setLayoutProperty(entry.layerId, 'visibility', on ? 'visible' : 'none');
+                }
+            }
+        });
+
+        // ── Squiggly Maps: outdoor-styled basemap from local tiles ──────────
+        function buildOutdoorStyle(src) {
+            const s = (layer) => ({ source: src, 'source-layer': layer });
+            const name = ['coalesce', ['get', 'name:en'], ['get', 'name']];
+
+            return [
+                { id: 'bg', type: 'background', paint: { 'background-color': '#f7f6f1' } },
+
+                // Landcover
+                { id: 'landcover-grass', type: 'fill', ...s('landcover'),
+                  filter: ['==', 'class', 'grass'],
+                  paint: { 'fill-color': '#d8e8c8', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 0.4] } },
+                { id: 'landcover-wood', type: 'fill', ...s('landcover'),
+                  filter: ['==', 'class', 'wood'],
+                  paint: { 'fill-color': '#bee5a0', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 0.4] } },
+                { id: 'landcover-sand', type: 'fill', ...s('landcover'),
+                  filter: ['in', 'class', 'sand', 'rock', 'ice'],
+                  paint: { 'fill-color': '#f5e9c6', 'fill-opacity': 0.5 } },
+                { id: 'landcover-other', type: 'fill', ...s('landcover'),
+                  filter: ['!in', 'class', 'grass', 'wood', 'sand', 'rock', 'ice'],
+                  paint: { 'fill-color': '#e0e8d8', 'fill-opacity': 0.3 } },
+
+                // Landuse
+                { id: 'landuse-residential', type: 'fill', ...s('landuse'),
+                  filter: ['==', 'class', 'residential'],
+                  paint: { 'fill-color': '#ede7df', 'fill-opacity': 0.6 } },
+                { id: 'landuse-commercial', type: 'fill', ...s('landuse'),
+                  filter: ['in', 'class', 'commercial', 'industrial', 'retail'],
+                  paint: { 'fill-color': '#e8dfd5', 'fill-opacity': 0.5 } },
+                { id: 'landuse-cemetery', type: 'fill', ...s('landuse'),
+                  filter: ['==', 'class', 'cemetery'],
+                  paint: { 'fill-color': '#d6dfc4', 'fill-opacity': 0.6 } },
+                { id: 'landuse-hospital', type: 'fill', ...s('landuse'),
+                  filter: ['==', 'class', 'hospital'],
+                  paint: { 'fill-color': '#f3d8d8', 'fill-opacity': 0.5 } },
+                { id: 'landuse-school', type: 'fill', ...s('landuse'),
+                  filter: ['in', 'class', 'school', 'university'],
+                  paint: { 'fill-color': '#f0e6d0', 'fill-opacity': 0.5 } },
+
+                // Park
+                { id: 'park-fill', type: 'fill', ...s('park'),
+                  paint: { 'fill-color': '#c8e6aa', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.6, 14, 0.4] } },
+                { id: 'park-outline', type: 'line', ...s('park'),
+                  minzoom: 9,
+                  paint: { 'line-color': '#9ec97a', 'line-width': 1, 'line-dasharray': [4, 2] } },
+
+                // Water
+                { id: 'water-fill', type: 'fill', ...s('water'),
+                  paint: { 'fill-color': '#a0cfdf' } },
+                { id: 'waterway-river', type: 'line', ...s('waterway'),
+                  filter: ['==', 'class', 'river'],
+                  paint: { 'line-color': '#a0cfdf', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3] } },
+                { id: 'waterway-stream', type: 'line', ...s('waterway'),
+                  filter: ['!=', 'class', 'river'],
+                  minzoom: 10,
+                  paint: { 'line-color': '#a0cfdf', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 14, 1.5] } },
+
+                // Aeroway
+                { id: 'aeroway-area', type: 'fill', ...s('aeroway'),
+                  filter: ['==', '$type', 'Polygon'],
+                  paint: { 'fill-color': '#ddd', 'fill-opacity': 0.6 } },
+                { id: 'aeroway-line', type: 'line', ...s('aeroway'),
+                  filter: ['==', '$type', 'LineString'],
+                  paint: { 'line-color': '#ccc', 'line-width': ['match', ['get', 'class'], 'runway', 4, 'taxiway', 2, 1] } },
+
+                // Boundary
+                { id: 'boundary-country', type: 'line', ...s('boundary'),
+                  filter: ['==', 'admin_level', 2],
+                  paint: { 'line-color': '#9a8db5', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 10, 2], 'line-dasharray': [5, 2] } },
+                { id: 'boundary-state', type: 'line', ...s('boundary'),
+                  filter: ['==', 'admin_level', 4],
+                  minzoom: 4,
+                  paint: { 'line-color': '#b0a5c5', 'line-width': 0.8, 'line-dasharray': [3, 2] } },
+
+                // Building
+                { id: 'building-fill', type: 'fill', ...s('building'),
+                  minzoom: 13,
+                  paint: { 'fill-color': '#ddd5ce', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0.3, 16, 0.7] } },
+                { id: 'building-outline', type: 'line', ...s('building'),
+                  minzoom: 14,
+                  paint: { 'line-color': '#c8bfb5', 'line-width': 0.5 } },
+
+                // Roads — casing
+                { id: 'road-motorway-casing', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'motorway'], minzoom: 5,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#c77532', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 14, 8, 18, 20] } },
+                { id: 'road-trunk-casing', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'trunk'], minzoom: 6,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#c78e32', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1, 14, 7, 18, 18] } },
+                { id: 'road-primary-casing', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'primary'], minzoom: 7,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#c9b46a', 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1, 14, 6, 18, 16] } },
+                { id: 'road-secondary-casing', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'secondary'], minzoom: 9,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#c0bda8', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 14, 5, 18, 14] } },
+                { id: 'road-tertiary-casing', type: 'line', ...s('transportation'),
+                  filter: ['in', 'class', 'tertiary', 'minor'], minzoom: 11,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#c8c8c8', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 14, 4, 18, 12] } },
+
+                // Roads — fill
+                { id: 'road-motorway', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'motorway'], minzoom: 5,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#e8933a', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.8, 14, 6, 18, 16] } },
+                { id: 'road-trunk', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'trunk'], minzoom: 6,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#f0b040', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.5, 14, 5, 18, 14] } },
+                { id: 'road-primary', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'primary'], minzoom: 7,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#f0d268', 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 14, 4, 18, 12] } },
+                { id: 'road-secondary', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'secondary'], minzoom: 9,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 3.5, 18, 10] } },
+                { id: 'road-tertiary', type: 'line', ...s('transportation'),
+                  filter: ['in', 'class', 'tertiary', 'minor'], minzoom: 11,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.3, 14, 2.5, 18, 8] } },
+                { id: 'road-service', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'service'], minzoom: 13,
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 18, 4] } },
+                { id: 'road-path', type: 'line', ...s('transportation'),
+                  filter: ['in', 'class', 'path', 'track'], minzoom: 12,
+                  paint: { 'line-color': '#c07850', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 18, 2], 'line-dasharray': [4, 2] } },
+                { id: 'road-rail', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'rail'], minzoom: 10,
+                  paint: { 'line-color': '#b8b8b8', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 14, 1.5] } },
+                { id: 'road-rail-dash', type: 'line', ...s('transportation'),
+                  filter: ['==', 'class', 'rail'], minzoom: 10,
+                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 14, 1], 'line-dasharray': [3, 3] } },
+
+                // Labels — water
+                { id: 'water-name-ocean', type: 'symbol', ...s('water_name'),
+                  filter: ['==', '$type', 'Point'],
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 12, 8, 16],
+                    'text-font': ['Open Sans Italic'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#6b96b0', 'text-halo-color': 'rgba(255,255,255,0.8)', 'text-halo-width': 1.5 } },
+                { id: 'water-name-line', type: 'symbol', ...s('water_name'),
+                  filter: ['==', '$type', 'LineString'],
+                  layout: { 'text-field': name, 'text-size': 11, 'text-font': ['Open Sans Italic'],
+                    'symbol-placement': 'line', 'text-rotation-alignment': 'map' },
+                  paint: { 'text-color': '#6b96b0', 'text-halo-color': 'rgba(255,255,255,0.8)', 'text-halo-width': 1 } },
+
+                // Labels — roads
+                { id: 'road-label-primary', type: 'symbol', ...s('transportation_name'),
+                  filter: ['in', 'class', 'motorway', 'trunk', 'primary'], minzoom: 10,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 9, 14, 12],
+                    'text-font': ['Open Sans Regular'], 'symbol-placement': 'line', 'text-rotation-alignment': 'map', 'text-max-angle': 30 },
+                  paint: { 'text-color': '#5c4a34', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                { id: 'road-label-secondary', type: 'symbol', ...s('transportation_name'),
+                  filter: ['!in', 'class', 'motorway', 'trunk', 'primary'], minzoom: 13,
+                  layout: { 'text-field': name, 'text-size': 10, 'text-font': ['Open Sans Regular'],
+                    'symbol-placement': 'line', 'text-rotation-alignment': 'map', 'text-max-angle': 30 },
+                  paint: { 'text-color': '#666', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+
+                // Mountain peaks
+                { id: 'mountain-peak-point', type: 'circle', ...s('mountain_peak'),
+                  minzoom: 9,
+                  paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2, 14, 4],
+                    'circle-color': '#8b6914', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' } },
+                { id: 'mountain-peak-label', type: 'symbol', ...s('mountain_peak'),
+                  minzoom: 10,
+                  layout: { 'text-field': ['concat', name, '\n', ['to-string', ['get', 'ele']], ' m'],
+                    'text-size': 10, 'text-font': ['Open Sans Regular'], 'text-offset': [0, 1.2], 'text-anchor': 'top' },
+                  paint: { 'text-color': '#6e5421', 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.5 } },
+
+                // POI
+                { id: 'poi-label', type: 'symbol', ...s('poi'),
+                  minzoom: 14,
+                  layout: { 'text-field': name, 'text-size': 10, 'text-font': ['Open Sans Regular'],
+                    'text-offset': [0, 0.8], 'text-anchor': 'top', 'text-optional': true },
+                  paint: { 'text-color': '#665', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+
+                // Aerodrome labels
+                { id: 'aerodrome-label', type: 'symbol', ...s('aerodrome_label'),
+                  minzoom: 10,
+                  layout: { 'text-field': name, 'text-size': 10, 'text-font': ['Open Sans Regular'],
+                    'text-offset': [0, 0.8], 'text-anchor': 'top' },
+                  paint: { 'text-color': '#555', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+
+                // House numbers
+                { id: 'housenumber-label', type: 'symbol', ...s('housenumber'),
+                  minzoom: 17,
+                  layout: { 'text-field': ['get', 'housenumber'], 'text-size': 9, 'text-font': ['Open Sans Regular'] },
+                  paint: { 'text-color': '#999', 'text-halo-color': '#fff', 'text-halo-width': 0.8 } },
+
+                // Place labels
+                { id: 'place-country', type: 'symbol', ...s('place'),
+                  filter: ['==', 'class', 'country'], maxzoom: 8,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 11, 6, 16],
+                    'text-font': ['Open Sans Bold'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.1, 'text-max-width': 6 },
+                  paint: { 'text-color': '#444', 'text-halo-color': '#fff', 'text-halo-width': 2 } },
+                { id: 'place-state', type: 'symbol', ...s('place'),
+                  filter: ['==', 'class', 'state'], minzoom: 4, maxzoom: 10,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 4, 9, 8, 13],
+                    'text-font': ['Open Sans Regular'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.08, 'text-max-width': 8 },
+                  paint: { 'text-color': '#666', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                { id: 'place-city', type: 'symbol', ...s('place'),
+                  filter: ['==', 'class', 'city'], minzoom: 4,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 4, 10, 10, 18, 14, 22],
+                    'text-font': ['Open Sans Bold'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#333', 'text-halo-color': '#fff', 'text-halo-width': 2 } },
+                { id: 'place-town', type: 'symbol', ...s('place'),
+                  filter: ['==', 'class', 'town'], minzoom: 7,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 7, 10, 14, 16],
+                    'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#444', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                { id: 'place-village', type: 'symbol', ...s('place'),
+                  filter: ['==', 'class', 'village'], minzoom: 10,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 14],
+                    'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#555', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                { id: 'place-hamlet', type: 'symbol', ...s('place'),
+                  filter: ['in', 'class', 'hamlet', 'suburb', 'neighbourhood', 'isolated_dwelling'], minzoom: 12,
+                  layout: { 'text-field': name, 'text-size': 11, 'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#666', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+
+                // Park labels
+                { id: 'park-label', type: 'symbol', ...s('park'),
+                  filter: ['==', '$type', 'Point'], minzoom: 10,
+                  layout: { 'text-field': name, 'text-size': 11, 'text-font': ['Open Sans Italic'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#3a7a14', 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.5 } },
+            ];
+        }
+
+        function addSquigglyBasemap(tileSourceId, displayName, container) {
+            const style = {
+                version: 8,
+                glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+                sources: {
+                    [tileSourceId]: { type: 'vector', url: `${MARTIN}/${tileSourceId}` },
+                },
+                layers: buildOutdoorStyle(tileSourceId),
+            };
+
+            const key = `squiggly-${tileSourceId}`;
+            BASEMAPS[key] = style;
+
+            const label = document.createElement('label');
+            label.className = 'basemap-option';
+            label.innerHTML = `
+                <input type="radio" name="basemap" value="${key}">
+                ${displayName}
+            `;
+            label.querySelector('input').addEventListener('change', e => {
+                map.setStyle(BASEMAPS[e.target.value]);
+            });
+            container.appendChild(label);
+        }
+
+        map.on('load', loadCatalog);
+    </script>
+</body>
+</html>
