@@ -1,0 +1,26 @@
+services:
+  martin:
+    image: ghcr.io/maplibre/martin:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./martin-config.yaml:/martin-config.yaml:ro
+      - ./tiles:/tiles:ro
+    environment:
+      RUST_LOG: info
+    command: ["--config", "/martin-config.yaml"]
+    restart: on-failure
+
+  planetiler:
+    image: ghcr.io/onthegomap/planetiler:latest
+    volumes:
+      - ./datasets/sources:/data/sources
+      - ./tiles:/data/output
+      - ./datasets/tmp:/data/tmp
+    profiles:
+      - generate
+    command: >
+      --osm_path=/data/sources/australia.osm.pbf
+      --output=/data/output/output.mbtiles
+      --download
+      --force

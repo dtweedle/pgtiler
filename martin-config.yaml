@@ -1,0 +1,14 @@
+# Martin tile server configuration
+# Docs: https://martin.maplibre.org/configuration.html
+
+listen_addresses: '0.0.0.0:3000'
+
+# Serve any .pmtiles files dropped into the tiles/ directory
+pmtiles:
+  paths:
+    - /tiles
+
+# Serve any .mbtiles files dropped into the tiles/ or conversion/ directory
+mbtiles:
+  paths:
+    - /tiles
