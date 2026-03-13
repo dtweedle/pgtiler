@@ -19,6 +19,9 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VRT_HOST="$PROJECT_DIR/datasets/sources/australia-dem.vrt"
 VRT_CONTAINER="/data/datasets/sources/australia-dem.vrt"
 
+CLEAN_TIF_HOST="$PROJECT_DIR/datasets/tmp/australia-dem-clean.tif"
+CLEAN_TIF_CONTAINER="/data/datasets/tmp/australia-dem-clean.tif"
+
 MBTILES_CONTAINER="/data/datasets/tmp/australia-terrain.mbtiles"
 MBTILES_HOST="$PROJECT_DIR/datasets/tmp/australia-terrain.mbtiles"
 
@@ -39,11 +42,42 @@ fi
 mkdir -p "$PROJECT_DIR/datasets/tmp"
 mkdir -p "$PROJECT_DIR/tiles"
 
-# ── Step 1: RGB encode → MBTiles ──────────────────────────────────────────
+# ── Step 1: Create clean VRT with nodata ─────────────────────────────────
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 1/2 — RGB Terrain Encoding"
+echo "  Step 1/3 — Prepare VRT (set nodata → 0)"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
+echo "  rio-rgbify doesn't respect GDAL nodata masks, so gaps in"
+echo "  the VRT produce garbage floats that crash the encoder."
+echo "  gdalwarp merges all tiles into a single compressed GeoTIFF"
+echo "  with gaps filled to 0 (sea level)."
+echo ""
+
+rm -f "$CLEAN_TIF_HOST"
+
+docker compose run --rm -T gdal \
+    gdalwarp \
+    -t_srs EPSG:4326 \
+    -dstnodata 0 \
+    -wo "INIT_DEST=0" \
+    -co BIGTIFF=YES \
+    -co COMPRESS=DEFLATE \
+    -co PREDICTOR=2 \
+    -co TILED=YES \
+    -overwrite \
+    "$VRT_CONTAINER" \
+    "$CLEAN_TIF_CONTAINER"
+
+echo "  Clean GeoTIFF written: $CLEAN_TIF_HOST"
+echo "  Size: $(du -h "$CLEAN_TIF_HOST" | cut -f1)"
+
+# ── Step 2: RGB encode → MBTiles ──────────────────────────────────────────
+
+echo ""
+echo "════════════════════════════════════════════════════════════════════"
+echo "  Step 2/3 — RGB Terrain Encoding"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "  Input:    $VRT_HOST"
@@ -71,18 +105,18 @@ docker compose run --rm rgbify \
     --max-z "$MAX_ZOOM" \
     --min-z "$MIN_ZOOM" \
     --format png \
-    "$VRT_CONTAINER" \
+    "$CLEAN_TIF_CONTAINER" \
     "$MBTILES_CONTAINER"
 
 echo ""
 echo "  MBTiles written: $MBTILES_HOST"
 echo "  Size: $(du -h "$MBTILES_HOST" | cut -f1)"
 
-# ── Step 2: MBTiles → PMTiles ─────────────────────────────────────────────
+# ── Step 3: MBTiles → PMTiles ─────────────────────────────────────────────
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 2/2 — Convert to PMTiles"
+echo "  Step 3/3 — Convert to PMTiles"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "  Input:  $MBTILES_HOST"
