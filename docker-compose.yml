@@ -35,6 +35,7 @@ services:
 
   rgbify:
     image: helmi03/rio-rgbify
+    platform: linux/amd64
     volumes:
       - ./datasets:/data/datasets
       - ./tiles:/data/tiles
