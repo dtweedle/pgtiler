@@ -24,3 +24,38 @@ services:
       --output=/data/output/output.mbtiles
       --download
       --force
+
+  gdal:
+    image: ghcr.io/osgeo/gdal:alpine-small-latest
+    volumes:
+      - ./datasets:/data/datasets
+      - ./tiles:/data/tiles
+    profiles:
+      - tools
+
+  rgbify:
+    image: helmi03/rio-rgbify
+    volumes:
+      - ./datasets:/data/datasets
+      - ./tiles:/data/tiles
+    profiles:
+      - tools
+
+  tippecanoe:
+    build:
+      context: .
+      dockerfile: docker/tippecanoe.Dockerfile
+    platform: linux/arm64
+    volumes:
+      - ./datasets:/data/datasets
+      - ./tiles:/data/tiles
+    profiles:
+      - tools
+
+  pmtiles:
+    image: protomaps/go-pmtiles
+    volumes:
+      - ./datasets:/data/datasets
+      - ./tiles:/data/tiles
+    profiles:
+      - tools
