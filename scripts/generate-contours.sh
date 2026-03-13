@@ -5,9 +5,10 @@ set -euo pipefail
 # as PMTiles for Martin to serve.
 #
 # Pipeline:
-#   1. gdal_contour per .tif tile (parallel) → GeoJSON files
-#   2. tippecanoe merges all GeoJSON → vector MBTiles
-#   3. pmtiles convert → contours.pmtiles
+#   1. gdalwarp upsamples each .tif 3× with cubic spline → smoothed .tif
+#   2. gdal_contour per smoothed tile (parallel) → GeoJSON files
+#   3. tippecanoe merges all GeoJSON → vector MBTiles
+#   4. pmtiles convert → contours.pmtiles
 #
 # Input:    datasets/sources/copernicus-dem/*.tif
 # Output:   tiles/contours.pmtiles
@@ -16,10 +17,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DEM_DIR="$PROJECT_DIR/datasets/sources/copernicus-dem"
+SMOOTH_DIR="$PROJECT_DIR/datasets/tmp/smoothed-dem"
 CONTOUR_DIR="$PROJECT_DIR/datasets/tmp/contours"
 
 CONTOUR_INTERVAL=20     # metres between contour lines
 MAJOR_INTERVAL=100      # metres between major (index) contour lines
+SMOOTH_FACTOR=3         # upsample factor (3× = ~10m resolution) for smoother contours
 MAX_PARALLEL=8          # concurrent gdal_contour containers
 
 MBTILES_HOST="$PROJECT_DIR/datasets/tmp/contours.mbtiles"
@@ -38,20 +41,22 @@ fi
 
 # ── Step 1: Generate contours per tile (parallel) ─────────────────────────
 
-mkdir -p "$CONTOUR_DIR"
+mkdir -p "$SMOOTH_DIR" "$CONTOUR_DIR"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 1/3 — Contour Generation (parallel)"
+echo "  Step 1/4 — Smooth & Contour (parallel)"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "  Input:       $DEM_DIR"
 echo "  Output:      $CONTOUR_DIR (one GeoJSON per tile)"
 echo "  Interval:    ${CONTOUR_INTERVAL}m"
+echo "  Smoothing:   ${SMOOTH_FACTOR}× upsample with cubic spline"
 echo "  Parallel:    ${MAX_PARALLEL} containers"
 echo ""
-echo "  Each 1°×1° DEM tile is processed by its own gdal_contour"
-echo "  container, tracing isolines and writing GeoJSON."
+echo "  Each 1°×1° DEM tile is upsampled ${SMOOTH_FACTOR}× with cubic spline"
+echo "  interpolation to produce smoother contour lines, then processed"
+echo "  by gdal_contour."
 echo ""
 
 tile_count=$(ls "$DEM_DIR"/*.tif | wc -l | tr -d ' ')
@@ -61,6 +66,8 @@ process_tile() {
     local basename
     basename=$(basename "$tif_file" .tif)
     local container_input="/data/datasets/sources/copernicus-dem/${basename}.tif"
+    local container_smoothed="/data/datasets/tmp/smoothed-dem/${basename}.tif"
+    local host_smoothed="${SMOOTH_DIR}/${basename}.tif"
     local container_output="/data/datasets/tmp/contours/${basename}.geojson"
     local host_output="${CONTOUR_DIR}/${basename}.geojson"
 
@@ -70,21 +77,37 @@ process_tile() {
         return
     fi
 
+    # Step 1: Upsample with cubic spline for smoother contours
+    if [[ ! -f "$host_smoothed" ]]; then
+        if ! docker compose run --rm -T gdal \
+            gdalwarp \
+            -r cubicspline \
+            -tr 0.000277778 0.000277778 \
+            -overwrite \
+            "$container_input" \
+            "$container_smoothed" \
+            2>/dev/null; then
+            echo "  ✗ $basename (smooth failed)"
+            return
+        fi
+    fi
+
+    # Step 2: Generate contours from smoothed DEM
     if docker compose run --rm -T gdal \
         gdal_contour \
         -i "$CONTOUR_INTERVAL" \
         -a elevation \
         -f GeoJSON \
-        "$container_input" \
+        "$container_smoothed" \
         "$container_output" \
         2>/dev/null; then
         echo "  ✓ $basename"
     else
-        echo "  ✗ $basename (failed)"
+        echo "  ✗ $basename (contour failed)"
     fi
 }
 export -f process_tile
-export CONTOUR_INTERVAL CONTOUR_DIR
+export CONTOUR_INTERVAL CONTOUR_DIR SMOOTH_DIR SMOOTH_FACTOR
 
 echo "  Processing ${tile_count} tiles..."
 echo ""
@@ -99,7 +122,7 @@ echo "  Generated ${geojson_count} GeoJSON files."
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 2/3 — Vector Tile Generation (tippecanoe)"
+echo "  Step 2/4 — Vector Tile Generation (tippecanoe)"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "  Input:  ${geojson_count} GeoJSON files"
@@ -135,7 +158,7 @@ echo "  Size: $(du -h "$MBTILES_HOST" | cut -f1)"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 3/3 — Convert to PMTiles"
+echo "  Step 3/4 — Convert to PMTiles"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 
@@ -145,6 +168,17 @@ docker compose run --rm pmtiles \
 echo ""
 echo "  PMTiles written: $PMTILES_HOST"
 echo "  Size: $(du -h "$PMTILES_HOST" | cut -f1)"
+
+# ── Step 4: Clean up smoothed DEM tiles ───────────────────────────────────
+
+echo ""
+echo "════════════════════════════════════════════════════════════════════"
+echo "  Step 4/4 — Cleanup"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
+
+rm -rf "$SMOOTH_DIR"
+echo "  Removed smoothed DEM tiles ($SMOOTH_DIR)"
 
 # ── Summary ───────────────────────────────────────────────────────────────
 
