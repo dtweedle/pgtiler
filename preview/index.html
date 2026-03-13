@@ -82,18 +82,14 @@
             <div style="color:#888; font-size:11px;">Loading catalog...</div>
         </div>
 
-        <!-- Section 3: Individual raw layers -->
-        <h2>Raw Squiggly Layers</h2>
+        <!-- Section 3: Squiggly data layers -->
+        <h2>Squiggly Data Layers</h2>
 
-        <label class="layer-toggle" id="toggle-all-row" style="display:none;">
-            <input type="checkbox" id="toggle-all">
-            <span class="swatch" style="background:#7ec8e3;"></span>
-            <strong>All layers</strong>
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-contours">
+            <span class="swatch" style="background:#b5651d;"></span>
+            Contours
         </label>
-
-        <div id="layer-toggles">
-            <div style="color:#888; font-size:11px;">Loading catalog...</div>
-        </div>
 
         <!-- Section 4: External toggleable layers -->
         <h2>External Layers</h2>
@@ -114,11 +110,14 @@
     <script>
         const MARTIN = 'http://localhost:3000';
 
+        const GLYPHS_URL = 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf';
+
         const BASEMAPS = {
-            none: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e0e0e0' } }] },
+            none: { version: 8, glyphs: GLYPHS_URL, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e0e0e0' } }] },
             street: 'https://tiles.openfreemap.org/styles/liberty',
             satellite: {
                 version: 8,
+                glyphs: GLYPHS_URL,
                 sources: {
                     'esri-satellite': {
                         type: 'raster',
@@ -132,6 +131,7 @@
             },
             topo: {
                 version: 8,
+                glyphs: GLYPHS_URL,
                 sources: {
                     'opentopomap': {
                         type: 'raster',
@@ -145,11 +145,8 @@
             },
         };
 
-        // Palette for raw layer overlays
-        const COLORS = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990'];
-
-        // Each entry: { tileSourceId, sourceId, sourceLayer, layerId, color, visible }
-        const catalogEntries = [];
+        // Data layer state
+        const dataLayerState = { contours: false };
 
         const map = new maplibregl.Map({
             container: 'map',
@@ -163,28 +160,52 @@
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
         map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
 
-        // ── Add a single raw catalog layer to the map ───────────────────────
-        function addCatalogEntry(entry) {
-            if (!map.getSource(entry.sourceId)) {
-                map.addSource(entry.sourceId, { type: 'vector', url: `${MARTIN}/${entry.tileSourceId}` });
+        // ── Add contour lines layer to the map ─────────────────────────────
+        function addContoursLayer() {
+            if (!map.getSource('contours')) {
+                map.addSource('contours', { type: 'vector', url: `${MARTIN}/contours` });
             }
-            if (map.getLayer(entry.layerId)) return;
-
-            const vis = entry.visible ? 'visible' : 'none';
-            const base = {
-                id: entry.layerId,
-                source: entry.sourceId,
-                'source-layer': entry.sourceLayer,
-                layout: { visibility: vis },
-            };
-
-            const name = entry.sourceLayer;
-            if (['place', 'poi', 'aerodrome_label', 'mountain_peak', 'housenumber', 'water_name'].includes(name)) {
-                map.addLayer({ ...base, type: 'circle', paint: { 'circle-radius': 4, 'circle-color': entry.color, 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' } });
-            } else if (['transportation', 'transportation_name', 'waterway', 'aeroway', 'boundary'].includes(name)) {
-                map.addLayer({ ...base, type: 'line', paint: { 'line-color': entry.color, 'line-width': 1.5 } });
-            } else {
-                map.addLayer({ ...base, type: 'fill', paint: { 'fill-color': entry.color, 'fill-opacity': 0.3, 'fill-outline-color': entry.color } });
+            if (!map.getLayer('contours-line')) {
+                const vis = dataLayerState.contours ? 'visible' : 'none';
+                map.addLayer({
+                    id: 'contours-line',
+                    type: 'line',
+                    source: 'contours',
+                    'source-layer': 'contours',
+                    layout: { visibility: vis },
+                    paint: {
+                        'line-color': '#b5651d',
+                        'line-opacity': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 0.6, 0.3],
+                        'line-width': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 1.2, 0.5],
+                    },
+                });
+            }
+            if (!map.getLayer('contours-label')) {
+                const vis = dataLayerState.contours ? 'visible' : 'none';
+                map.addLayer({
+                    id: 'contours-label',
+                    type: 'symbol',
+                    source: 'contours',
+                    'source-layer': 'contours',
+                    filter: ['==', ['%', ['get', 'elevation'], 100], 0],
+                    minzoom: 12,
+                    layout: {
+                        visibility: vis,
+                        'text-field': ['concat', ['to-string', ['get', 'elevation']], ' m'],
+                        'text-size': 9,
+                        'text-font': ['Open Sans Regular'],
+                        'symbol-placement': 'line',
+                        'text-rotation-alignment': 'map',
+                        'text-max-angle': 30,
+                        // "line-join": "round",
+                        // "line-cap": "round"
+                    },
+                    paint: {
+                        'text-color': '#8B5A2B',
+                        'text-halo-color': 'rgba(255,255,255,0.8)',
+                        'text-halo-width': 1,
+                    },
+                });
             }
         }
 
@@ -215,7 +236,7 @@
         // ── Re-add all overlay layers after style switch ────────────────────
         function addOverlays() {
             if (externalState.hillshade) addHillshadeLayer();
-            catalogEntries.forEach(addCatalogEntry);
+            if (dataLayerState.contours) addContoursLayer();
         }
 
         map.on('style.load', addOverlays);
@@ -238,11 +259,21 @@
             }
         });
 
-        // ── Fetch Martin catalog ────────────────────────────────────────────
-        const layerCheckboxes = [];
+        // ── Contours toggle ─────────────────────────────────────────────────
+        document.getElementById('toggle-contours').addEventListener('change', e => {
+            dataLayerState.contours = e.target.checked;
+            if (dataLayerState.contours) {
+                addContoursLayer();
+            }
+            for (const layerId of ['contours-line', 'contours-label']) {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', dataLayerState.contours ? 'visible' : 'none');
+                }
+            }
+        });
 
+        // ── Fetch Martin catalog (Squiggly Maps discovery) ────────────────
         async function loadCatalog() {
-            const layerContainer = document.getElementById('layer-toggles');
             const squigglyContainer = document.getElementById('squiggly-maps');
             let tileSourceIds;
             try {
@@ -256,103 +287,33 @@
                     tileSourceIds = Object.keys(catalog);
                 }
             } catch (err) {
-                const msg = '<div style="color:#f66;font-size:11px;">Could not reach Martin.<br>Is it running on :3000?</div>';
-                layerContainer.innerHTML = msg;
-                squigglyContainer.innerHTML = msg;
+                squigglyContainer.innerHTML = '<div style="color:#f66;font-size:11px;">Could not reach Martin.<br>Is it running on :3000?</div>';
                 return;
             }
 
             if (tileSourceIds.length === 0) {
-                layerContainer.innerHTML = '<div style="color:#888;font-size:11px;">No sources found</div>';
                 squigglyContainer.innerHTML = '<div style="color:#888;font-size:11px;">No sources found</div>';
                 return;
             }
 
-            layerContainer.innerHTML = '';
             squigglyContainer.innerHTML = '';
-            let colorIdx = 0;
 
             for (const tileSourceId of tileSourceIds) {
+                // Only build the Squiggly styled basemap for the OSM source
+                if (tileSourceId !== 'output') continue;
+
                 let vectorLayers = [];
-                let displayName = tileSourceId;
                 try {
                     const tj = await fetch(`${MARTIN}/${tileSourceId}`);
                     const tileJson = await tj.json();
                     vectorLayers = tileJson.vector_layers || [];
-                    displayName = tileJson.name || tileSourceId;
                 } catch (_) { continue; }
 
                 if (vectorLayers.length === 0) continue;
 
-                // ── Squiggly Maps section: add styled basemap radio ─────
                 addSquigglyBasemap(tileSourceId, 'SquigglyOutdoorV1', squigglyContainer);
-
-                // ── Raw Squiggly Layers section: one toggle per sub-layer
-                for (const vl of vectorLayers) {
-                    const color = COLORS[colorIdx % COLORS.length];
-                    colorIdx++;
-
-                    const entry = {
-                        tileSourceId,
-                        sourceId: `catalog-${tileSourceId}`,
-                        sourceLayer: vl.id,
-                        layerId: `catalog-${tileSourceId}-${vl.id}`,
-                        color,
-                        visible: false,
-                    };
-                    catalogEntries.push(entry);
-
-                    const label = document.createElement('label');
-                    label.className = 'layer-toggle';
-                    label.innerHTML = `
-                        <input type="checkbox">
-                        <span class="swatch" style="background:${color};"></span>
-                        ${vl.id.replace(/_/g, ' ')}
-                    `;
-                    const checkbox = label.querySelector('input');
-                    layerCheckboxes.push({ checkbox, entry });
-
-                    checkbox.addEventListener('change', () => {
-                        entry.visible = checkbox.checked;
-                        if (entry.visible && !map.getLayer(entry.layerId)) {
-                            addCatalogEntry(entry);
-                        }
-                        if (map.getLayer(entry.layerId)) {
-                            map.setLayoutProperty(entry.layerId, 'visibility', entry.visible ? 'visible' : 'none');
-                        }
-                        syncToggleAll();
-                    });
-                    layerContainer.appendChild(label);
-                }
-            }
-
-            if (catalogEntries.length > 0) {
-                document.getElementById('toggle-all-row').style.display = 'flex';
             }
         }
-
-        // ── "All layers" toggle ─────────────────────────────────────────────
-        function syncToggleAll() {
-            const allOn = layerCheckboxes.length > 0 && layerCheckboxes.every(lc => lc.checkbox.checked);
-            const someOn = layerCheckboxes.some(lc => lc.checkbox.checked);
-            const toggle = document.getElementById('toggle-all');
-            toggle.checked = allOn;
-            toggle.indeterminate = someOn && !allOn;
-        }
-
-        document.getElementById('toggle-all').addEventListener('change', e => {
-            const on = e.target.checked;
-            for (const { checkbox, entry } of layerCheckboxes) {
-                checkbox.checked = on;
-                entry.visible = on;
-                if (on && !map.getLayer(entry.layerId)) {
-                    addCatalogEntry(entry);
-                }
-                if (map.getLayer(entry.layerId)) {
-                    map.setLayoutProperty(entry.layerId, 'visibility', on ? 'visible' : 'none');
-                }
-            }
-        });
 
         // ── Squiggly Maps: outdoor-styled basemap from local tiles ──────────
         function buildOutdoorStyle(src) {
