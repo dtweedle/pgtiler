@@ -75,11 +75,6 @@
             <input type="radio" name="basemap" value="topo">
             Topo (OpenTopoMap)
         </label>
-        <label class="basemap-option">
-            <input type="radio" name="basemap" value="hillshade">
-            Hillshade (ESRI)
-        </label>
-
         <!-- Section 2: Our styled maps from Martin -->
         <h2>Squiggly Maps</h2>
 
@@ -99,6 +94,15 @@
         <div id="layer-toggles">
             <div style="color:#888; font-size:11px;">Loading catalog...</div>
         </div>
+
+        <!-- Section 4: External toggleable layers -->
+        <h2>External Layers</h2>
+
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-hillshade">
+            <span class="swatch" style="background:#8B7355;"></span>
+            Hillshade (ESRI)
+        </label>
 
         <div id="links">
             <a href="http://localhost:3000/catalog" target="_blank">Tile catalog</a>
@@ -138,19 +142,6 @@
                     },
                 },
                 layers: [{ id: 'opentopomap', type: 'raster', source: 'opentopomap' }],
-            },
-            hillshade: {
-                version: 8,
-                sources: {
-                    'esri-hillshade': {
-                        type: 'raster',
-                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'],
-                        tileSize: 256,
-                        attribution: '© Esri, USGS, NOAA',
-                        maxzoom: 16,
-                    },
-                },
-                layers: [{ id: 'esri-hillshade', type: 'raster', source: 'esri-hillshade' }],
             },
         };
 
@@ -197,8 +188,33 @@
             }
         }
 
-        // ── Re-add raw overlay layers after style switch ────────────────────
+        // ── External layers state ───────────────────────────────────────────
+        const externalState = { hillshade: false };
+
+        function addHillshadeLayer() {
+            if (!map.getSource('esri-hillshade')) {
+                map.addSource('esri-hillshade', {
+                    type: 'raster',
+                    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'],
+                    tileSize: 256,
+                    attribution: '© Esri, USGS, NOAA',
+                    maxzoom: 16,
+                });
+            }
+            if (!map.getLayer('hillshade-layer')) {
+                map.addLayer({
+                    id: 'hillshade-layer',
+                    type: 'raster',
+                    source: 'esri-hillshade',
+                    layout: { visibility: externalState.hillshade ? 'visible' : 'none' },
+                    paint: { 'raster-opacity': 0.4, 'raster-resampling': 'linear' },
+                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster')?.id);
+            }
+        }
+
+        // ── Re-add all overlay layers after style switch ────────────────────
         function addOverlays() {
+            if (externalState.hillshade) addHillshadeLayer();
             catalogEntries.forEach(addCatalogEntry);
         }
 
@@ -209,6 +225,17 @@
             radio.addEventListener('change', e => {
                 map.setStyle(BASEMAPS[e.target.value]);
             });
+        });
+
+        // ── Hillshade toggle ────────────────────────────────────────────────
+        document.getElementById('toggle-hillshade').addEventListener('change', e => {
+            externalState.hillshade = e.target.checked;
+            if (externalState.hillshade) {
+                addHillshadeLayer();
+            }
+            if (map.getLayer('hillshade-layer')) {
+                map.setLayoutProperty('hillshade-layer', 'visibility', externalState.hillshade ? 'visible' : 'none');
+            }
         });
 
         // ── Fetch Martin catalog ────────────────────────────────────────────
