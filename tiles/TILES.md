@@ -6,7 +6,7 @@ This directory holds the generated vector tile archives (`.mbtiles`, `.pmtiles`)
 
 ```bash
 ./scripts/init.sh            # download datasets
-./scripts/generate-tiles.sh  # generate tiles into this directory
+./scripts/generate-osm-tiles.sh  # generate tiles into this directory
 ```
 
 Martin auto-discovers any `.mbtiles` or `.pmtiles` file placed here. The filename (without extension) becomes the tile source ID in Martin's catalog.

@@ -6,16 +6,19 @@ This directory holds the raw data sources used to build tiles for the tiling ser
 
 ## Structure
 
-- `sources/` — raw downloads (`.osm.pbf`, `.shp.zip`, `.sqlite.zip`, etc.)
+- `sources/` — raw downloads (`.osm.pbf`, `.tif`, `.vrt`)
+- `tmp/` — intermediate build artifacts (GeoJSON, MBTiles)
 
 ## Current data sources
 
-| File | Description |
+| Path | Description |
 |------|-------------|
-| `australia.osm.pbf` | OpenStreetMap extract for Australia |
-| `natural_earth_vector.sqlite.zip` | Natural Earth cultural + physical vector data |
-| `water-polygons-split-3857.zip` | OpenStreetMap water polygons (Web Mercator) |
-| `lake_centerline.shp.zip` | Lake centreline geometries for label placement |
+| `sources/australia.osm.pbf` | OpenStreetMap extract for Australia (Geofabrik) |
+| `sources/copernicus-dem/*.tif` | ~1450 Copernicus GLO-30 DEM tiles at 30m resolution (AWS S3) |
+| `sources/australia-dem.vrt` | Virtual raster index over the DEM tiles (built by download script) |
+| `tmp/contours/*.geojson` | Intermediate contour line files (one per DEM tile) |
+| `tmp/contours.mbtiles` | Intermediate contour vector tiles |
+| `tmp/australia-terrain.mbtiles` | Intermediate RGB-encoded terrain tiles |
 
 ## Adding a new data source
 
