@@ -91,11 +91,44 @@
             Contours
         </label>
 
-        <!-- Section 4: External toggleable layers -->
-        <h2>External Layers</h2>
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-contours-test">
+            <span class="swatch" style="background:#b5651d; opacity:0.5;"></span>
+            Contours (test)
+        </label>
+
+        <!-- Section 4: Terrain layers -->
+        <h2>Terrain</h2>
 
         <label class="layer-toggle">
             <input type="checkbox" id="toggle-hillshade">
+            <span class="swatch" style="background:#8B7355;"></span>
+            Hillshade
+        </label>
+
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-3d-terrain">
+            <span class="swatch" style="background:#6B8E23;"></span>
+            3D Terrain
+        </label>
+
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-hillshade-test">
+            <span class="swatch" style="background:#8B7355; opacity:0.5;"></span>
+            Hillshade (test)
+        </label>
+
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-3d-terrain-test">
+            <span class="swatch" style="background:#6B8E23; opacity:0.5;"></span>
+            3D Terrain (test)
+        </label>
+
+        <!-- Section 5: External toggleable layers -->
+        <h2>External Layers</h2>
+
+        <label class="layer-toggle">
+            <input type="checkbox" id="toggle-hillshade-esri">
             <span class="swatch" style="background:#8B7355;"></span>
             Hillshade (ESRI)
         </label>
@@ -163,7 +196,7 @@
         // ── Add contour lines layer to the map ─────────────────────────────
         function addContoursLayer() {
             if (!map.getSource('contours')) {
-                map.addSource('contours', { type: 'vector', url: `${MARTIN}/contours` });
+                map.addSource('contours', { type: 'vector', url: `${MARTIN}/squiggly.v1.contours` });
             }
             if (!map.getLayer('contours-line')) {
                 const vis = dataLayerState.contours ? 'visible' : 'none';
@@ -209,10 +242,140 @@
             }
         }
 
+        // ── Test contour layer ────────────────────────────────────────────────
+        const testState = { contours: false, hillshade: false, terrain3d: false };
+
+        function addContoursTestLayer() {
+            if (!map.getSource('contours-test')) {
+                map.addSource('contours-test', { type: 'vector', url: `${MARTIN}/squiggly.v1.contours-test` });
+            }
+            if (!map.getLayer('contours-test-line')) {
+                const vis = testState.contours ? 'visible' : 'none';
+                map.addLayer({
+                    id: 'contours-test-line',
+                    type: 'line',
+                    source: 'contours-test',
+                    'source-layer': 'contours',
+                    layout: { visibility: vis },
+                    paint: {
+                        'line-color': '#b5651d',
+                        'line-opacity': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 0.6, 0.3],
+                        'line-width': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 1.2, 0.5],
+                    },
+                });
+            }
+            if (!map.getLayer('contours-test-label')) {
+                const vis = testState.contours ? 'visible' : 'none';
+                map.addLayer({
+                    id: 'contours-test-label',
+                    type: 'symbol',
+                    source: 'contours-test',
+                    'source-layer': 'contours',
+                    filter: ['==', ['%', ['get', 'elevation'], 100], 0],
+                    minzoom: 12,
+                    layout: {
+                        visibility: vis,
+                        'text-field': ['concat', ['to-string', ['get', 'elevation']], ' m'],
+                        'text-size': 9,
+                        'text-font': ['Open Sans Regular'],
+                        'symbol-placement': 'line',
+                        'text-rotation-alignment': 'map',
+                        'text-max-angle': 30,
+                    },
+                    paint: {
+                        'text-color': '#8B5A2B',
+                        'text-halo-color': 'rgba(255,255,255,0.8)',
+                        'text-halo-width': 1,
+                    },
+                });
+            }
+        }
+
+        // ── Terrain layers (local) ────────────────────────────────────────────
+        // MapLibre requires separate sources for hillshade and 3D terrain.
+        const terrainState = { hillshade: false, terrain3d: false };
+
+        const TERRAIN_DEM_OPTS = {
+            type: 'raster-dem',
+            tiles: [`${MARTIN}/squiggly.v1.terrain/{z}/{x}/{y}`],
+            encoding: 'terrarium',
+            tileSize: 512,
+            maxzoom: 12,
+        };
+
+        function addLocalHillshadeLayer() {
+            if (!map.getSource('terrain-hillshade')) {
+                map.addSource('terrain-hillshade', TERRAIN_DEM_OPTS);
+            }
+            if (!map.getLayer('local-hillshade')) {
+                map.addLayer({
+                    id: 'local-hillshade',
+                    type: 'hillshade',
+                    source: 'terrain-hillshade',
+                    layout: { visibility: terrainState.hillshade ? 'visible' : 'none' },
+                    paint: {
+                        'hillshade-exaggeration': 0.5,
+                        'hillshade-shadow-color': '#473B24',
+                        'hillshade-illumination-direction': 315,
+                    },
+                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id);
+            }
+        }
+
+        function update3dTerrain() {
+            if (terrainState.terrain3d) {
+                if (!map.getSource('terrain-3d')) {
+                    map.addSource('terrain-3d', TERRAIN_DEM_OPTS);
+                }
+                map.setTerrain({ source: 'terrain-3d', exaggeration: 1.5 });
+            } else {
+                map.setTerrain(null);
+            }
+        }
+
+        // ── Test terrain layers ──────────────────────────────────────────────
+        const TEST_TERRAIN_DEM_OPTS = {
+            type: 'raster-dem',
+            tiles: [`${MARTIN}/squiggly.v1.terrain-test/{z}/{x}/{y}`],
+            encoding: 'terrarium',
+            tileSize: 512,
+            maxzoom: 12,
+        };
+
+        function addTestHillshadeLayer() {
+            if (!map.getSource('terrain-test-hillshade')) {
+                map.addSource('terrain-test-hillshade', TEST_TERRAIN_DEM_OPTS);
+            }
+            if (!map.getLayer('test-hillshade')) {
+                map.addLayer({
+                    id: 'test-hillshade',
+                    type: 'hillshade',
+                    source: 'terrain-test-hillshade',
+                    layout: { visibility: testState.hillshade ? 'visible' : 'none' },
+                    paint: {
+                        'hillshade-exaggeration': 0.5,
+                        'hillshade-shadow-color': '#473B24',
+                        'hillshade-illumination-direction': 315,
+                    },
+                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id);
+            }
+        }
+
+        function updateTest3dTerrain() {
+            if (testState.terrain3d) {
+                if (!map.getSource('terrain-test-3d')) {
+                    map.addSource('terrain-test-3d', TEST_TERRAIN_DEM_OPTS);
+                }
+                map.setTerrain({ source: 'terrain-test-3d', exaggeration: 1.5 });
+            } else {
+                map.setTerrain(null);
+            }
+        }
+
         // ── External layers state ───────────────────────────────────────────
         const externalState = { hillshade: false };
 
-        function addHillshadeLayer() {
+        function addEsriHillshadeLayer() {
             if (!map.getSource('esri-hillshade')) {
                 map.addSource('esri-hillshade', {
                     type: 'raster',
@@ -222,21 +385,26 @@
                     maxzoom: 16,
                 });
             }
-            if (!map.getLayer('hillshade-layer')) {
+            if (!map.getLayer('esri-hillshade-layer')) {
                 map.addLayer({
-                    id: 'hillshade-layer',
+                    id: 'esri-hillshade-layer',
                     type: 'raster',
                     source: 'esri-hillshade',
                     layout: { visibility: externalState.hillshade ? 'visible' : 'none' },
                     paint: { 'raster-opacity': 0.4, 'raster-resampling': 'linear' },
-                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster')?.id);
+                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id);
             }
         }
 
         // ── Re-add all overlay layers after style switch ────────────────────
         function addOverlays() {
-            if (externalState.hillshade) addHillshadeLayer();
+            if (terrainState.hillshade) addLocalHillshadeLayer();
+            if (testState.hillshade) addTestHillshadeLayer();
+            if (externalState.hillshade) addEsriHillshadeLayer();
             if (dataLayerState.contours) addContoursLayer();
+            if (testState.contours) addContoursTestLayer();
+            if (terrainState.terrain3d) update3dTerrain();
+            if (testState.terrain3d) updateTest3dTerrain();
         }
 
         map.on('style.load', addOverlays);
@@ -248,15 +416,62 @@
             });
         });
 
-        // ── Hillshade toggle ────────────────────────────────────────────────
+        // ── Local hillshade toggle ───────────────────────────────────────────
         document.getElementById('toggle-hillshade').addEventListener('change', e => {
+            terrainState.hillshade = e.target.checked;
+            if (terrainState.hillshade) {
+                addLocalHillshadeLayer();
+            }
+            if (map.getLayer('local-hillshade')) {
+                map.setLayoutProperty('local-hillshade', 'visibility', terrainState.hillshade ? 'visible' : 'none');
+            }
+        });
+
+        // ── 3D terrain toggle ────────────────────────────────────────────────
+        document.getElementById('toggle-3d-terrain').addEventListener('change', e => {
+            terrainState.terrain3d = e.target.checked;
+            update3dTerrain();
+        });
+
+        // ── ESRI hillshade toggle ────────────────────────────────────────────
+        document.getElementById('toggle-hillshade-esri').addEventListener('change', e => {
             externalState.hillshade = e.target.checked;
             if (externalState.hillshade) {
-                addHillshadeLayer();
+                addEsriHillshadeLayer();
             }
-            if (map.getLayer('hillshade-layer')) {
-                map.setLayoutProperty('hillshade-layer', 'visibility', externalState.hillshade ? 'visible' : 'none');
+            if (map.getLayer('esri-hillshade-layer')) {
+                map.setLayoutProperty('esri-hillshade-layer', 'visibility', externalState.hillshade ? 'visible' : 'none');
             }
+        });
+
+        // ── Test contours toggle ─────────────────────────────────────────────
+        document.getElementById('toggle-contours-test').addEventListener('change', e => {
+            testState.contours = e.target.checked;
+            if (testState.contours) {
+                addContoursTestLayer();
+            }
+            for (const layerId of ['contours-test-line', 'contours-test-label']) {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', testState.contours ? 'visible' : 'none');
+                }
+            }
+        });
+
+        // ── Test hillshade toggle ────────────────────────────────────────────
+        document.getElementById('toggle-hillshade-test').addEventListener('change', e => {
+            testState.hillshade = e.target.checked;
+            if (testState.hillshade) {
+                addTestHillshadeLayer();
+            }
+            if (map.getLayer('test-hillshade')) {
+                map.setLayoutProperty('test-hillshade', 'visibility', testState.hillshade ? 'visible' : 'none');
+            }
+        });
+
+        // ── Test 3D terrain toggle ───────────────────────────────────────────
+        document.getElementById('toggle-3d-terrain-test').addEventListener('change', e => {
+            testState.terrain3d = e.target.checked;
+            updateTest3dTerrain();
         });
 
         // ── Contours toggle ─────────────────────────────────────────────────
@@ -299,8 +514,8 @@
             squigglyContainer.innerHTML = '';
 
             for (const tileSourceId of tileSourceIds) {
-                // Only build the Squiggly styled basemap for the OSM source
-                if (tileSourceId !== 'output') continue;
+                // Only build the Squiggly styled basemap for OSM sources
+                if (tileSourceId !== 'squiggly.v1.base' && tileSourceId !== 'squiggly.v1.base-test') continue;
 
                 let vectorLayers = [];
                 try {
@@ -311,7 +526,8 @@
 
                 if (vectorLayers.length === 0) continue;
 
-                addSquigglyBasemap(tileSourceId, 'SquigglyOutdoorV1', squigglyContainer);
+                const displayName = tileSourceId === 'output-test' ? 'SquigglyOutdoorV1 (test)' : 'SquigglyOutdoorV1';
+                addSquigglyBasemap(tileSourceId, displayName, squigglyContainer);
             }
         }
 
