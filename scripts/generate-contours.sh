@@ -16,20 +16,33 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# ── Test mode ────────────────────────────────────────────────────────────
+TEST_MODE=false
+if [[ "${1:-}" == "--test" ]]; then
+    TEST_MODE=true
+    source "$SCRIPT_DIR/test-config.sh"
+fi
+
+if $TEST_MODE; then
+    SUFFIX="$TEST_SUFFIX"
+else
+    SUFFIX=""
+fi
+
 DEM_DIR="$PROJECT_DIR/datasets/sources/copernicus-dem"
-SMOOTH_DIR="$PROJECT_DIR/datasets/tmp/smoothed-dem"
-CONTOUR_DIR="$PROJECT_DIR/datasets/tmp/contours"
+SMOOTH_DIR="$PROJECT_DIR/datasets/tmp/smoothed-dem${SUFFIX}"
+CONTOUR_DIR="$PROJECT_DIR/datasets/tmp/contours${SUFFIX}"
 
 CONTOUR_INTERVAL=20     # metres between contour lines
 MAJOR_INTERVAL=100      # metres between major (index) contour lines
 SMOOTH_FACTOR=3         # upsample factor (3× = ~10m resolution) for smoother contours
 MAX_PARALLEL=8          # concurrent gdal_contour containers
 
-MBTILES_HOST="$PROJECT_DIR/datasets/tmp/contours.mbtiles"
-MBTILES_CONTAINER="/data/datasets/tmp/contours.mbtiles"
+MBTILES_HOST="$PROJECT_DIR/datasets/tmp/contours${SUFFIX}.mbtiles"
+MBTILES_CONTAINER="/data/datasets/tmp/contours${SUFFIX}.mbtiles"
 
-PMTILES_HOST="$PROJECT_DIR/tiles/contours.pmtiles"
-PMTILES_CONTAINER="/data/tiles/contours.pmtiles"
+PMTILES_HOST="$PROJECT_DIR/tiles/squiggly.v1.contours${SUFFIX}.pmtiles"
+PMTILES_CONTAINER="/data/tiles/squiggly.v1.contours${SUFFIX}.pmtiles"
 
 # ── Preflight checks ──────────────────────────────────────────────────────
 
@@ -59,16 +72,21 @@ echo "  interpolation to produce smoother contour lines, then processed"
 echo "  by gdal_contour."
 echo ""
 
-tile_count=$(ls "$DEM_DIR"/*.tif | wc -l | tr -d ' ')
+if $TEST_MODE; then
+    tile_files=("$DEM_DIR/${TEST_TILE}.tif")
+else
+    tile_files=("$DEM_DIR"/*.tif)
+fi
+tile_count=${#tile_files[@]}
 
 process_tile() {
     local tif_file="$1"
     local basename
     basename=$(basename "$tif_file" .tif)
     local container_input="/data/datasets/sources/copernicus-dem/${basename}.tif"
-    local container_smoothed="/data/datasets/tmp/smoothed-dem/${basename}.tif"
+    local container_smoothed="/data/datasets/tmp/smoothed-dem${SUFFIX}/${basename}.tif"
     local host_smoothed="${SMOOTH_DIR}/${basename}.tif"
-    local container_output="/data/datasets/tmp/contours/${basename}.geojson"
+    local container_output="/data/datasets/tmp/contours${SUFFIX}/${basename}.geojson"
     local host_output="${CONTOUR_DIR}/${basename}.geojson"
 
     # Skip if already generated
@@ -107,12 +125,12 @@ process_tile() {
     fi
 }
 export -f process_tile
-export CONTOUR_INTERVAL CONTOUR_DIR SMOOTH_DIR SMOOTH_FACTOR
+export CONTOUR_INTERVAL CONTOUR_DIR SMOOTH_DIR SMOOTH_FACTOR SUFFIX
 
 echo "  Processing ${tile_count} tiles..."
 echo ""
 
-ls "$DEM_DIR"/*.tif | xargs -P "$MAX_PARALLEL" -I {} bash -c 'process_tile "$@"' _ {}
+printf '%s\n' "${tile_files[@]}" | xargs -P "$MAX_PARALLEL" -I {} bash -c 'process_tile "$@"' _ {}
 
 geojson_count=$(ls "$CONTOUR_DIR"/*.geojson 2>/dev/null | wc -l | tr -d ' ')
 echo ""
@@ -148,7 +166,7 @@ docker compose run --rm tippecanoe \
     --no-feature-limit \
     --no-tile-size-limit \
     --force \
-    /data/datasets/tmp/contours/*.geojson'
+    /data/datasets/tmp/contours'"${SUFFIX}"'/*.geojson'
 
 echo ""
 echo "  MBTiles written: $MBTILES_HOST"

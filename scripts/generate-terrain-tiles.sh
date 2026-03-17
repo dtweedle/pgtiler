@@ -16,17 +16,30 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-VRT_HOST="$PROJECT_DIR/datasets/sources/australia-dem.vrt"
-VRT_CONTAINER="/data/datasets/sources/australia-dem.vrt"
+# ── Test mode ────────────────────────────────────────────────────────────
+TEST_MODE=false
+if [[ "${1:-}" == "--test" ]]; then
+    TEST_MODE=true
+    source "$SCRIPT_DIR/test-config.sh"
+fi
 
-CLEAN_TIF_HOST="$PROJECT_DIR/datasets/tmp/australia-dem-clean.tif"
-CLEAN_TIF_CONTAINER="/data/datasets/tmp/australia-dem-clean.tif"
+if $TEST_MODE; then
+    SUFFIX="$TEST_SUFFIX"
+else
+    SUFFIX=""
+fi
 
-MBTILES_CONTAINER="/data/datasets/tmp/australia-terrain.mbtiles"
-MBTILES_HOST="$PROJECT_DIR/datasets/tmp/australia-terrain.mbtiles"
+VRT_HOST="$PROJECT_DIR/datasets/sources/australia-terrain${SUFFIX}.vrt"
+VRT_CONTAINER="/data/datasets/sources/australia-terrain${SUFFIX}.vrt"
 
-PMTILES_CONTAINER="/data/tiles/australia-terrain.pmtiles"
-PMTILES_HOST="$PROJECT_DIR/tiles/australia-terrain.pmtiles"
+CLEAN_TIF_HOST="$PROJECT_DIR/datasets/tmp/australia-dem${SUFFIX}-clean.tif"
+CLEAN_TIF_CONTAINER="/data/datasets/tmp/australia-dem${SUFFIX}-clean.tif"
+
+MBTILES_CONTAINER="/data/datasets/tmp/australia-terrain${SUFFIX}.mbtiles"
+MBTILES_HOST="$PROJECT_DIR/datasets/tmp/australia-terrain${SUFFIX}.mbtiles"
+
+PMTILES_CONTAINER="/data/tiles/squiggly.v1.terrain${SUFFIX}.pmtiles"
+PMTILES_HOST="$PROJECT_DIR/tiles/squiggly.v1.terrain${SUFFIX}.pmtiles"
 
 MIN_ZOOM=0
 MAX_ZOOM=12
@@ -101,7 +114,12 @@ echo ""
 # Remove stale output if present
 rm -f "$MBTILES_HOST"
 
+# Terrarium encoding: elevation = (R * 256 + G + B / 256) - 32768
+# rio-rgbify formula:  elevation = base_val + (R * 65536 + G * 256 + B) * interval
+# So: base_val = -32768, interval = 1/256 = 0.00390625
 docker compose run --rm rgbify \
+    --base-val -32768 \
+    --interval 0.00390625 \
     --max-z "$MAX_ZOOM" \
     --min-z "$MIN_ZOOM" \
     --format png \
