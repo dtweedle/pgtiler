@@ -19,11 +19,6 @@ services:
       - ./datasets/tmp:/data/tmp
     profiles:
       - generate
-    command: >
-      --osm_path=/data/sources/australia.osm.pbf
-      --output=/data/output/output.mbtiles
-      --download
-      --force
 
   gdal:
     image: ghcr.io/osgeo/gdal:alpine-small-latest
