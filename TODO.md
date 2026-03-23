@@ -6,6 +6,10 @@
   - `protomaps/go-pmtiles` — verify provenance or build from source
   - `ghcr.io/felt/tippecanoe` — official Felt image, currently used with `platform: linux/amd64` (runs via Rosetta on Apple Silicon). Ideally find or build a native arm64 image.
 
+## Contour styling
+- [ ] Smoother zoom transition — fade contour lines in gradually from low zoom to high zoom instead of appearing abruptly
+- [ ] Reduce line density — render fewer contour lines at lower zoom levels (e.g. only 100m intervals at z8–10, 50m at z11–12, full 20m at z13+)
+
 ## Data freshness
 - [ ] Check Copernicus DEM datestamp to see if newer data is available before downloading
   - Compare local tile timestamps against S3 `LastModified` headers
