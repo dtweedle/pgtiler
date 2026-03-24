@@ -24,6 +24,18 @@
   },
 "layers": [
     {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "hillshade",
+      "paint": {
+        "hillshade-exaggeration": 0.5,
+        "hillshade-shadow-color": "#473B24",
+        "hillshade-highlight-color": "#f6f0df",
+        "hillshade-accent-color": "#8f7a57",
+        "hillshade-illumination-direction": 315
+      }
+    },
+    {
       "id": "bg",
       "type": "background",
       "paint": {
