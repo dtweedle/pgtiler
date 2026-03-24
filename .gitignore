@@ -10,5 +10,8 @@ datasets/tmp/
 .env
 .env.local
 
+# Generated preview config (created by preview.sh from .env)
+preview/config.js
+
 # macOS
 .DS_Store
