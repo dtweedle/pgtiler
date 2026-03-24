@@ -1,0 +1,382 @@
+{
+  "version": 8,
+  "name": "Duncan Maps",
+  "glyphs": "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf",
+  "sources": {
+    "base": {
+      "type": "vector",
+      "url": "pmtiles://https://pub-f9fd6742ca5c4a45bb2f7e6019f37494.r2.dev/squiggly.v1.base.pmtiles",
+      "attribution": "&copy; <a href=\"https://www.openmaptiles.org/\" target=\"_blank\">OpenMapTiles</a> &copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors, terrain &copy; Copernicus DEM"
+    },
+    "contours": {
+      "type": "vector",
+      "url": "pmtiles://https://pub-f9fd6742ca5c4a45bb2f7e6019f37494.r2.dev/squiggly.v1.contours.pmtiles"
+    },
+    "hillshade": {
+      "type": "raster-dem",
+      "url": "pmtiles://https://pub-f9fd6742ca5c4a45bb2f7e6019f37494.r2.dev/squiggly.v1.terrain.pmtiles",
+      "encoding": "terrarium",
+      "tileSize": 512
+    }
+  },
+  "layers": [
+    {
+      "id": "duncan-background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e8e0cf"
+      }
+    },
+    {
+      "id": "duncan-hillshade",
+      "type": "hillshade",
+      "source": "hillshade",
+      "paint": {
+        "hillshade-exaggeration": 0.5,
+        "hillshade-shadow-color": "#473B24",
+        "hillshade-highlight-color": "#f6f0df",
+        "hillshade-accent-color": "#8f7a57",
+        "hillshade-illumination-direction": 315
+      }
+    },
+    {
+      "id": "duncan-landcover",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "landcover",
+      "paint": {
+        "fill-color": [
+          "match",
+          ["get", "class"],
+          ["wood", "forest"],
+          "#ccd9b5",
+          ["grass", "grassland", "meadow"],
+          "#dbe5c7",
+          ["scrub", "heath"],
+          "#d6d2b1",
+          ["sand"],
+          "#ead9b5",
+          ["rock"],
+          "#d2c6b0",
+          "#e3dccd"
+        ],
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.2, 10, 0.38, 14, 0.5]
+      }
+    },
+    {
+      "id": "duncan-landuse",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "landuse",
+      "paint": {
+        "fill-color": [
+          "match",
+          ["get", "class"],
+          ["residential", "suburb", "neighbourhood"],
+          "#e8dfcf",
+          ["industrial"],
+          "#ddd1bc",
+          ["farmland", "farmyard", "orchard", "vineyard"],
+          "#e7debb",
+          "#e2d7c7"
+        ],
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.05, 10, 0.18, 14, 0.26]
+      }
+    },
+    {
+      "id": "duncan-park",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "park",
+      "paint": {
+        "fill-color": "#cfe0bb",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.18, 10, 0.28, 14, 0.34]
+      }
+    },
+    {
+      "id": "duncan-water",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#8eaec4",
+        "fill-opacity": 0.92
+      }
+    },
+    {
+      "id": "duncan-waterway",
+      "type": "line",
+      "source": "base",
+      "source-layer": "waterway",
+      "paint": {
+        "line-color": "#6f98b1",
+        "line-opacity": 0.9,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 10, 1.4, 14, 3.5]
+      }
+    },
+    {
+      "id": "contours",
+      "type": "line",
+      "source": "contours",
+      "source-layer": "contours",
+      "paint": {
+        "line-color": "#b5651d",
+        "line-opacity": ["case", ["==", ["%", ["get", "elevation"], 100], 0], 0.6, 0.3],
+        "line-width": ["case", ["==", ["%", ["get", "elevation"], 100], 0], 1.2, 0.5]
+      }
+    },
+    {
+      "id": "duncan-boundary",
+      "type": "line",
+      "source": "base",
+      "source-layer": "boundary",
+      "filter": ["all", ["!=", ["get", "maritime"], 1]],
+      "paint": {
+        "line-color": "#9d8f7b",
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.12, 6, 0.26, 12, 0.38],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.3, 6, 0.7, 12, 1.3],
+        "line-dasharray": [4, 3]
+      }
+    },
+    {
+      "id": "duncan-buildings",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "building",
+      "minzoom": 12.5,
+      "paint": {
+        "fill-color": "#d1c3ad",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0.12, 14, 0.34]
+      }
+    },
+    {
+      "id": "duncan-roads-major-casing",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#f8f2e7",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 5, 2.2, 10, 4.2, 14, 10.5],
+        "line-opacity": 0.92
+      }
+    },
+    {
+      "id": "duncan-roads-local-casing",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["tertiary", "minor", "service"]]],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#f7f1e5",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.2, 14, 5.4],
+        "line-opacity": 0.9
+      }
+    },
+    {
+      "id": "duncan-roads-major",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": [
+          "match",
+          ["get", "class"],
+          ["motorway", "trunk"],
+          "#c98f50",
+          ["primary"],
+          "#d5aa68",
+          "#dcc389"
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1.1, 10, 2.3, 14, 7.2],
+        "line-opacity": 0.94
+      }
+    },
+    {
+      "id": "duncan-roads-local",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["tertiary", "minor", "service"]]],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#c9b49a",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.7, 14, 3.4],
+        "line-opacity": 0.92
+      }
+    },
+    {
+      "id": "duncan-paths",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "filter": [
+        "any",
+        ["in", ["get", "class"], ["literal", ["path", "track"]]],
+        ["in", ["get", "subclass"], ["literal", ["bridleway", "cycleway", "footway", "path", "track"]]]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#8e6b49",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 14, 2],
+        "line-dasharray": [2, 1.5],
+        "line-opacity": 0.78
+      }
+    },
+    {
+      "id": "duncan-road-labels",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "transportation_name",
+      "minzoom": 9,
+      "filter": ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary"]]],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["coalesce", ["get", "ref"], ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 9, 10, 12, 11, 14, 13],
+        "text-letter-spacing": 0.02,
+        "text-max-angle": 45
+      },
+      "paint": {
+        "text-color": "#715f4c",
+        "text-halo-color": "#f4efe7",
+        "text-halo-width": 1.1
+      }
+    },
+    {
+      "id": "duncan-water-labels",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "water_name",
+      "minzoom": 5,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 5, 11, 10, 12, 14, 14]
+      },
+      "paint": {
+        "text-color": "#4f7592",
+        "text-halo-color": "#e9e4d7",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "duncan-park-labels",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "park",
+      "minzoom": 9,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 9, 10, 13, 12]
+      },
+      "paint": {
+        "text-color": "#58714c",
+        "text-halo-color": "#eef0e7",
+        "text-halo-width": 0.9
+      }
+    },
+    {
+      "id": "duncan-place-major",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "place",
+      "filter": ["in", ["get", "class"], ["literal", ["country", "state", "province", "city", "town"]]],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]],
+        "text-font": ["Open Sans Bold"],
+        "text-size": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          3,
+          ["match", ["get", "class"], ["country"], 13, ["state", "province"], 11, 0],
+          7,
+          ["match", ["get", "class"], ["country"], 17, ["state", "province"], 14, ["city"], 13, ["town"], 11, 0],
+          14,
+          ["match", ["get", "class"], ["country"], 20, ["state", "province"], 18, ["city"], 17, ["town"], 14, 12]
+        ],
+        "text-letter-spacing": ["match", ["get", "class"], ["country", "state", "province"], 0.06, 0.02]
+      },
+      "paint": {
+        "text-color": "#3c332a",
+        "text-halo-color": "#f3eee6",
+        "text-halo-width": 1.4
+      }
+    },
+    {
+      "id": "duncan-place-local",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "place",
+      "minzoom": 9,
+      "filter": ["in", ["get", "class"], ["literal", ["village", "suburb", "hamlet", "locality"]]],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 9, 10, 14, 13]
+      },
+      "paint": {
+        "text-color": "#5d5245",
+        "text-halo-color": "#f3eee6",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "duncan-mountain-peaks",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "mountain_peak",
+      "minzoom": 8,
+      "layout": {
+        "text-field": ["concat", ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]], " ", ["to-string", ["get", "ele"]], "m"],
+        "text-font": ["Open Sans Bold"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 8, 10, 12, 12, 14, 13]
+      },
+      "paint": {
+        "text-color": "#6a4b2d",
+        "text-halo-color": "#efe9de",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "duncan-aerodromes",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "aerodrome_label",
+      "minzoom": 9,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name_int"], ["get", "name"]],
+        "text-font": ["Open Sans Bold"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 9, 10, 14, 12],
+        "text-letter-spacing": 0.08
+      },
+      "paint": {
+        "text-color": "#4d5965",
+        "text-halo-color": "#f1eee8",
+        "text-halo-width": 1
+      }
+    }
+  ]
+}
