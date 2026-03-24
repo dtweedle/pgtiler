@@ -88,9 +88,7 @@ echo ""
 # Full Australia VRT — used by contour generation
 echo "  All of Australia (for contours):"
 docker compose run --rm gdal \
-    gdalbuildvrt \
-    /data/datasets/sources/australia-dem.vrt \
-    /data/datasets/sources/copernicus-dem/*.tif
+    sh -c 'gdalbuildvrt /data/datasets/sources/australia-dem.vrt /data/datasets/sources/copernicus-dem/*.tif'
 echo "  australia-dem.vrt — $(grep -c '<SourceFilename' "$PROJECT_DIR/datasets/sources/australia-dem.vrt") tiles"
 
 # Terrain subset VRT — used by terrain tile generation
