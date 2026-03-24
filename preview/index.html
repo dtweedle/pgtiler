@@ -6,6 +6,8 @@
     <title>pgtiler — Local Preview</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" />
     <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
+    <script src="config.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
@@ -24,7 +26,7 @@
         #sidebar h1 { font-size: 15px; font-weight: 700; color: #7ec8e3; letter-spacing: 1px; }
         #sidebar h2 { font-size: 10px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 14px; }
 
-        .layer-toggle {
+        .radio-option {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -32,19 +34,7 @@
             cursor: pointer;
             padding: 3px 0;
         }
-        .layer-toggle input[type="checkbox"] { cursor: pointer; accent-color: #7ec8e3; }
-
-        .basemap-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            padding: 3px 0;
-        }
-        .basemap-option input[type="radio"] { cursor: pointer; accent-color: #7ec8e3; }
-
-        .swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+        .radio-option input[type="radio"] { cursor: pointer; accent-color: #7ec8e3; }
 
         #links { margin-top: auto; padding-top: 12px; border-top: 1px solid #2a2a4a; }
         #links a { color: #7ec8e3; font-size: 11px; display: block; margin-bottom: 4px; }
@@ -56,82 +46,81 @@
     <div id="sidebar">
         <h1>pgtiler</h1>
 
-        <!-- Section 1: External reference maps -->
-        <h2>External Maps</h2>
-
-        <label class="basemap-option">
-            <input type="radio" name="basemap" value="none">
+        <h2>Maps</h2>
+        <label class="radio-option">
+            <input type="radio" name="maps" value="none">
             None
         </label>
-        <label class="basemap-option">
-            <input type="radio" name="basemap" value="street" checked>
+        <label class="radio-option">
+            <input type="radio" name="maps" value="street" checked>
             Street (OpenFreeMap)
         </label>
-        <label class="basemap-option">
-            <input type="radio" name="basemap" value="satellite">
+        <label class="radio-option">
+            <input type="radio" name="maps" value="satellite">
             Satellite (ESRI)
         </label>
-        <label class="basemap-option">
-            <input type="radio" name="basemap" value="topo">
+        <label class="radio-option">
+            <input type="radio" name="maps" value="topo">
             Topo (OpenTopoMap)
         </label>
-        <!-- Section 2: Our styled maps from Martin -->
-        <h2>Squiggly Maps</h2>
-
-        <div id="squiggly-maps">
-            <div style="color:#888; font-size:11px;">Loading catalog...</div>
-        </div>
-
-        <!-- Section 3: Squiggly data layers -->
-        <h2>Squiggly Data Layers</h2>
-
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-contours">
-            <span class="swatch" style="background:#b5651d;"></span>
-            Contours
+        <label class="radio-option">
+            <input type="radio" name="maps" value="squiggly-base">
+            squiggly.v1.base
         </label>
-
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-contours-test">
-            <span class="swatch" style="background:#b5651d; opacity:0.5;"></span>
-            Contours (test)
+        <label class="radio-option">
+            <input type="radio" name="maps" value="squiggly-base-test">
+            squiggly.v1.base-test
         </label>
+        <div id="r2-maps"></div>
 
-        <!-- Section 4: Terrain layers -->
-        <h2>Terrain</h2>
-
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-hillshade">
-            <span class="swatch" style="background:#8B7355;"></span>
-            Hillshade
+        <h2>Contours</h2>
+        <label class="radio-option">
+            <input type="radio" name="contours" value="none" checked>
+            None
         </label>
-
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-3d-terrain">
-            <span class="swatch" style="background:#6B8E23;"></span>
-            3D Terrain
+        <label class="radio-option">
+            <input type="radio" name="contours" value="local">
+            squiggly.v1.contours
         </label>
-
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-hillshade-test">
-            <span class="swatch" style="background:#8B7355; opacity:0.5;"></span>
-            Hillshade (test)
+        <label class="radio-option">
+            <input type="radio" name="contours" value="local-test">
+            squiggly.v1.contours-test
         </label>
+        <div id="r2-contours"></div>
 
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-3d-terrain-test">
-            <span class="swatch" style="background:#6B8E23; opacity:0.5;"></span>
-            3D Terrain (test)
+        <h2>Hillshade</h2>
+        <label class="radio-option">
+            <input type="radio" name="hillshade" value="none" checked>
+            None
         </label>
-
-        <!-- Section 5: External toggleable layers -->
-        <h2>External Layers</h2>
-
-        <label class="layer-toggle">
-            <input type="checkbox" id="toggle-hillshade-esri">
-            <span class="swatch" style="background:#8B7355;"></span>
+        <label class="radio-option">
+            <input type="radio" name="hillshade" value="local">
+            squiggly.v1.hillshade
+        </label>
+        <label class="radio-option">
+            <input type="radio" name="hillshade" value="local-test">
+            squiggly.v1.hillshade-test
+        </label>
+        <label class="radio-option">
+            <input type="radio" name="hillshade" value="esri">
             Hillshade (ESRI)
         </label>
+        <div id="r2-hillshade"></div>
+
+        <h2>Terrain</h2>
+        <label class="radio-option">
+            <input type="radio" name="terrain" value="none" checked>
+            None
+        </label>
+        <label class="radio-option">
+            <input type="radio" name="terrain" value="local">
+            squiggly.v1.terrain
+        </label>
+        <label class="radio-option">
+            <input type="radio" name="terrain" value="local-test">
+            squiggly.v1.terrain-test
+        </label>
+        <div id="r2-terrain"></div>
 
         <div id="links">
             <a href="http://localhost:3000/catalog" target="_blank">Tile catalog</a>
@@ -142,9 +131,16 @@
 
     <script>
         const MARTIN = 'http://localhost:3000';
+        const R2_URL = (window.PGTILER_CONFIG && window.PGTILER_CONFIG.R2_PUBLIC_URL) || '';
+
+        if (R2_URL) {
+            const pmtilesProtocol = new pmtiles.Protocol();
+            maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
+        }
 
         const GLYPHS_URL = 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf';
 
+        // ── Basemap styles ──────────────────────────────────────────────────
         const BASEMAPS = {
             none: { version: 8, glyphs: GLYPHS_URL, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e0e0e0' } }] },
             street: 'https://tiles.openfreemap.org/styles/liberty',
@@ -178,9 +174,14 @@
             },
         };
 
-        // Data layer state
-        const dataLayerState = { contours: false };
+        // ── Active selections ───────────────────────────────────────────────
+        const active = {
+            contours: 'none',
+            hillshade: 'none',
+            terrain: 'none',
+        };
 
+        // ── Map init ────────────────────────────────────────────────────────
         const map = new maplibregl.Map({
             container: 'map',
             style: BASEMAPS.street,
@@ -193,400 +194,62 @@
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
         map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
 
-        // ── Add contour lines layer to the map ─────────────────────────────
-        function addContoursLayer() {
-            if (!map.getSource('contours')) {
-                map.addSource('contours', { type: 'vector', url: `${MARTIN}/squiggly.v1.contours` });
-            }
-            if (!map.getLayer('contours-line')) {
-                const vis = dataLayerState.contours ? 'visible' : 'none';
-                map.addLayer({
-                    id: 'contours-line',
-                    type: 'line',
-                    source: 'contours',
-                    'source-layer': 'contours',
-                    layout: { visibility: vis },
-                    paint: {
-                        'line-color': '#b5651d',
-                        'line-opacity': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 0.6, 0.3],
-                        'line-width': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 1.2, 0.5],
-                    },
-                });
-            }
-            if (!map.getLayer('contours-label')) {
-                const vis = dataLayerState.contours ? 'visible' : 'none';
-                map.addLayer({
-                    id: 'contours-label',
-                    type: 'symbol',
-                    source: 'contours',
-                    'source-layer': 'contours',
-                    filter: ['==', ['%', ['get', 'elevation'], 100], 0],
-                    minzoom: 12,
-                    layout: {
-                        visibility: vis,
-                        'text-field': ['concat', ['to-string', ['get', 'elevation']], ' m'],
-                        'text-size': 9,
-                        'text-font': ['Open Sans Regular'],
-                        'symbol-placement': 'line',
-                        'text-rotation-alignment': 'map',
-                        'text-max-angle': 30,
-                        // "line-join": "round",
-                        // "line-cap": "round"
-                    },
-                    paint: {
-                        'text-color': '#8B5A2B',
-                        'text-halo-color': 'rgba(255,255,255,0.8)',
-                        'text-halo-width': 1,
-                    },
-                });
-            }
-        }
-
-        // ── Test contour layer ────────────────────────────────────────────────
-        const testState = { contours: false, hillshade: false, terrain3d: false };
-
-        function addContoursTestLayer() {
-            if (!map.getSource('contours-test')) {
-                map.addSource('contours-test', { type: 'vector', url: `${MARTIN}/squiggly.v1.contours-test` });
-            }
-            if (!map.getLayer('contours-test-line')) {
-                const vis = testState.contours ? 'visible' : 'none';
-                map.addLayer({
-                    id: 'contours-test-line',
-                    type: 'line',
-                    source: 'contours-test',
-                    'source-layer': 'contours',
-                    layout: { visibility: vis },
-                    paint: {
-                        'line-color': '#b5651d',
-                        'line-opacity': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 0.6, 0.3],
-                        'line-width': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 1.2, 0.5],
-                    },
-                });
-            }
-            if (!map.getLayer('contours-test-label')) {
-                const vis = testState.contours ? 'visible' : 'none';
-                map.addLayer({
-                    id: 'contours-test-label',
-                    type: 'symbol',
-                    source: 'contours-test',
-                    'source-layer': 'contours',
-                    filter: ['==', ['%', ['get', 'elevation'], 100], 0],
-                    minzoom: 12,
-                    layout: {
-                        visibility: vis,
-                        'text-field': ['concat', ['to-string', ['get', 'elevation']], ' m'],
-                        'text-size': 9,
-                        'text-font': ['Open Sans Regular'],
-                        'symbol-placement': 'line',
-                        'text-rotation-alignment': 'map',
-                        'text-max-angle': 30,
-                    },
-                    paint: {
-                        'text-color': '#8B5A2B',
-                        'text-halo-color': 'rgba(255,255,255,0.8)',
-                        'text-halo-width': 1,
-                    },
-                });
-            }
-        }
-
-        // ── Terrain layers (local) ────────────────────────────────────────────
-        // MapLibre requires separate sources for hillshade and 3D terrain.
-        const terrainState = { hillshade: false, terrain3d: false };
-
-        const TERRAIN_DEM_OPTS = {
-            type: 'raster-dem',
-            tiles: [`${MARTIN}/squiggly.v1.terrain/{z}/{x}/{y}`],
-            encoding: 'terrarium',
-            tileSize: 512,
-            maxzoom: 12,
-        };
-
-        function addLocalHillshadeLayer() {
-            if (!map.getSource('terrain-hillshade')) {
-                map.addSource('terrain-hillshade', TERRAIN_DEM_OPTS);
-            }
-            if (!map.getLayer('local-hillshade')) {
-                map.addLayer({
-                    id: 'local-hillshade',
-                    type: 'hillshade',
-                    source: 'terrain-hillshade',
-                    layout: { visibility: terrainState.hillshade ? 'visible' : 'none' },
-                    paint: {
-                        'hillshade-exaggeration': 0.5,
-                        'hillshade-shadow-color': '#473B24',
-                        'hillshade-illumination-direction': 315,
-                    },
-                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id);
-            }
-        }
-
-        function update3dTerrain() {
-            if (terrainState.terrain3d) {
-                if (!map.getSource('terrain-3d')) {
-                    map.addSource('terrain-3d', TERRAIN_DEM_OPTS);
-                }
-                map.setTerrain({ source: 'terrain-3d', exaggeration: 1.5 });
-            } else {
-                map.setTerrain(null);
-            }
-        }
-
-        // ── Test terrain layers ──────────────────────────────────────────────
-        const TEST_TERRAIN_DEM_OPTS = {
-            type: 'raster-dem',
-            tiles: [`${MARTIN}/squiggly.v1.terrain-test/{z}/{x}/{y}`],
-            encoding: 'terrarium',
-            tileSize: 512,
-            maxzoom: 12,
-        };
-
-        function addTestHillshadeLayer() {
-            if (!map.getSource('terrain-test-hillshade')) {
-                map.addSource('terrain-test-hillshade', TEST_TERRAIN_DEM_OPTS);
-            }
-            if (!map.getLayer('test-hillshade')) {
-                map.addLayer({
-                    id: 'test-hillshade',
-                    type: 'hillshade',
-                    source: 'terrain-test-hillshade',
-                    layout: { visibility: testState.hillshade ? 'visible' : 'none' },
-                    paint: {
-                        'hillshade-exaggeration': 0.5,
-                        'hillshade-shadow-color': '#473B24',
-                        'hillshade-illumination-direction': 315,
-                    },
-                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id);
-            }
-        }
-
-        function updateTest3dTerrain() {
-            if (testState.terrain3d) {
-                if (!map.getSource('terrain-test-3d')) {
-                    map.addSource('terrain-test-3d', TEST_TERRAIN_DEM_OPTS);
-                }
-                map.setTerrain({ source: 'terrain-test-3d', exaggeration: 1.5 });
-            } else {
-                map.setTerrain(null);
-            }
-        }
-
-        // ── External layers state ───────────────────────────────────────────
-        const externalState = { hillshade: false };
-
-        function addEsriHillshadeLayer() {
-            if (!map.getSource('esri-hillshade')) {
-                map.addSource('esri-hillshade', {
-                    type: 'raster',
-                    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'],
-                    tileSize: 256,
-                    attribution: '© Esri, USGS, NOAA',
-                    maxzoom: 16,
-                });
-            }
-            if (!map.getLayer('esri-hillshade-layer')) {
-                map.addLayer({
-                    id: 'esri-hillshade-layer',
-                    type: 'raster',
-                    source: 'esri-hillshade',
-                    layout: { visibility: externalState.hillshade ? 'visible' : 'none' },
-                    paint: { 'raster-opacity': 0.4, 'raster-resampling': 'linear' },
-                }, map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id);
-            }
-        }
-
-        // ── Re-add all overlay layers after style switch ────────────────────
-        function addOverlays() {
-            if (terrainState.hillshade) addLocalHillshadeLayer();
-            if (testState.hillshade) addTestHillshadeLayer();
-            if (externalState.hillshade) addEsriHillshadeLayer();
-            if (dataLayerState.contours) addContoursLayer();
-            if (testState.contours) addContoursTestLayer();
-            if (terrainState.terrain3d) update3dTerrain();
-            if (testState.terrain3d) updateTest3dTerrain();
-        }
-
-        map.on('style.load', addOverlays);
-
-        // ── Base map switcher (external maps) ───────────────────────────────
-        document.querySelectorAll('input[name="basemap"]').forEach(radio => {
-            radio.addEventListener('change', e => {
-                map.setStyle(BASEMAPS[e.target.value]);
-            });
-        });
-
-        // ── Local hillshade toggle ───────────────────────────────────────────
-        document.getElementById('toggle-hillshade').addEventListener('change', e => {
-            terrainState.hillshade = e.target.checked;
-            if (terrainState.hillshade) {
-                addLocalHillshadeLayer();
-            }
-            if (map.getLayer('local-hillshade')) {
-                map.setLayoutProperty('local-hillshade', 'visibility', terrainState.hillshade ? 'visible' : 'none');
-            }
-        });
-
-        // ── 3D terrain toggle ────────────────────────────────────────────────
-        document.getElementById('toggle-3d-terrain').addEventListener('change', e => {
-            terrainState.terrain3d = e.target.checked;
-            update3dTerrain();
-        });
-
-        // ── ESRI hillshade toggle ────────────────────────────────────────────
-        document.getElementById('toggle-hillshade-esri').addEventListener('change', e => {
-            externalState.hillshade = e.target.checked;
-            if (externalState.hillshade) {
-                addEsriHillshadeLayer();
-            }
-            if (map.getLayer('esri-hillshade-layer')) {
-                map.setLayoutProperty('esri-hillshade-layer', 'visibility', externalState.hillshade ? 'visible' : 'none');
-            }
-        });
-
-        // ── Test contours toggle ─────────────────────────────────────────────
-        document.getElementById('toggle-contours-test').addEventListener('change', e => {
-            testState.contours = e.target.checked;
-            if (testState.contours) {
-                addContoursTestLayer();
-            }
-            for (const layerId of ['contours-test-line', 'contours-test-label']) {
-                if (map.getLayer(layerId)) {
-                    map.setLayoutProperty(layerId, 'visibility', testState.contours ? 'visible' : 'none');
-                }
-            }
-        });
-
-        // ── Test hillshade toggle ────────────────────────────────────────────
-        document.getElementById('toggle-hillshade-test').addEventListener('change', e => {
-            testState.hillshade = e.target.checked;
-            if (testState.hillshade) {
-                addTestHillshadeLayer();
-            }
-            if (map.getLayer('test-hillshade')) {
-                map.setLayoutProperty('test-hillshade', 'visibility', testState.hillshade ? 'visible' : 'none');
-            }
-        });
-
-        // ── Test 3D terrain toggle ───────────────────────────────────────────
-        document.getElementById('toggle-3d-terrain-test').addEventListener('change', e => {
-            testState.terrain3d = e.target.checked;
-            updateTest3dTerrain();
-        });
-
-        // ── Contours toggle ─────────────────────────────────────────────────
-        document.getElementById('toggle-contours').addEventListener('change', e => {
-            dataLayerState.contours = e.target.checked;
-            if (dataLayerState.contours) {
-                addContoursLayer();
-            }
-            for (const layerId of ['contours-line', 'contours-label']) {
-                if (map.getLayer(layerId)) {
-                    map.setLayoutProperty(layerId, 'visibility', dataLayerState.contours ? 'visible' : 'none');
-                }
-            }
-        });
-
-        // ── Fetch Martin catalog (Squiggly Maps discovery) ────────────────
-        async function loadCatalog() {
-            const squigglyContainer = document.getElementById('squiggly-maps');
-            let tileSourceIds;
-            try {
-                const res = await fetch(`${MARTIN}/catalog`);
-                const catalog = await res.json();
-                if (catalog.tiles) {
-                    tileSourceIds = Object.keys(catalog.tiles);
-                } else if (Array.isArray(catalog)) {
-                    tileSourceIds = catalog.map(s => s.id);
-                } else {
-                    tileSourceIds = Object.keys(catalog);
-                }
-            } catch (err) {
-                squigglyContainer.innerHTML = '<div style="color:#f66;font-size:11px;">Could not reach Martin.<br>Is it running on :3000?</div>';
-                return;
-            }
-
-            if (tileSourceIds.length === 0) {
-                squigglyContainer.innerHTML = '<div style="color:#888;font-size:11px;">No sources found</div>';
-                return;
-            }
-
-            squigglyContainer.innerHTML = '';
-
-            for (const tileSourceId of tileSourceIds) {
-                // Only build the Squiggly styled basemap for OSM sources
-                if (tileSourceId !== 'squiggly.v1.base' && tileSourceId !== 'squiggly.v1.base-test') continue;
-
-                let vectorLayers = [];
-                try {
-                    const tj = await fetch(`${MARTIN}/${tileSourceId}`);
-                    const tileJson = await tj.json();
-                    vectorLayers = tileJson.vector_layers || [];
-                } catch (_) { continue; }
-
-                if (vectorLayers.length === 0) continue;
-
-                const displayName = tileSourceId === 'squiggly.v1.base-test' ? 'Squiggly v1 (test)' : 'Squiggly v1';
-                addSquigglyBasemap(tileSourceId, displayName, squigglyContainer);
-            }
-        }
-
-        // ── Squiggly Maps: outdoor-styled basemap from local tiles ──────────
+        // ── Squiggly outdoor style builder ──────────────────────────────────
         function buildOutdoorStyle(src) {
             const s = (layer) => ({ source: src, 'source-layer': layer });
             const name = ['coalesce', ['get', 'name:en'], ['get', 'name']];
 
             return [
-                { id: 'bg', type: 'background', paint: { 'background-color': '#f7f6f1' } },
+                { id: 'bg', type: 'background', paint: { 'background-color': '#e8e0cf' } },
 
                 // Landcover
                 { id: 'landcover-grass', type: 'fill', ...s('landcover'),
                   filter: ['==', 'class', 'grass'],
-                  paint: { 'fill-color': '#d8e8c8', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 0.4] } },
+                  paint: { 'fill-color': '#dbe5c7', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.2, 10, 0.38, 14, 0.5] } },
                 { id: 'landcover-wood', type: 'fill', ...s('landcover'),
                   filter: ['==', 'class', 'wood'],
-                  paint: { 'fill-color': '#bee5a0', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 0.4] } },
+                  paint: { 'fill-color': '#ccd9b5', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.2, 10, 0.38, 14, 0.5] } },
                 { id: 'landcover-sand', type: 'fill', ...s('landcover'),
                   filter: ['in', 'class', 'sand', 'rock', 'ice'],
-                  paint: { 'fill-color': '#f5e9c6', 'fill-opacity': 0.5 } },
+                  paint: { 'fill-color': '#ead9b5', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.2, 10, 0.38, 14, 0.5] } },
                 { id: 'landcover-other', type: 'fill', ...s('landcover'),
                   filter: ['!in', 'class', 'grass', 'wood', 'sand', 'rock', 'ice'],
-                  paint: { 'fill-color': '#e0e8d8', 'fill-opacity': 0.3 } },
+                  paint: { 'fill-color': '#e3dccd', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.2, 10, 0.38, 14, 0.5] } },
 
                 // Landuse
                 { id: 'landuse-residential', type: 'fill', ...s('landuse'),
                   filter: ['==', 'class', 'residential'],
-                  paint: { 'fill-color': '#ede7df', 'fill-opacity': 0.6 } },
+                  paint: { 'fill-color': '#e8dfcf', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.05, 10, 0.18, 14, 0.26] } },
                 { id: 'landuse-commercial', type: 'fill', ...s('landuse'),
                   filter: ['in', 'class', 'commercial', 'industrial', 'retail'],
-                  paint: { 'fill-color': '#e8dfd5', 'fill-opacity': 0.5 } },
+                  paint: { 'fill-color': '#ddd1bc', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.05, 10, 0.18, 14, 0.26] } },
                 { id: 'landuse-cemetery', type: 'fill', ...s('landuse'),
                   filter: ['==', 'class', 'cemetery'],
-                  paint: { 'fill-color': '#d6dfc4', 'fill-opacity': 0.6 } },
+                  paint: { 'fill-color': '#e2d7c7', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.05, 10, 0.18, 14, 0.26] } },
                 { id: 'landuse-hospital', type: 'fill', ...s('landuse'),
                   filter: ['==', 'class', 'hospital'],
-                  paint: { 'fill-color': '#f3d8d8', 'fill-opacity': 0.5 } },
+                  paint: { 'fill-color': '#e2d7c7', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.05, 10, 0.18, 14, 0.26] } },
                 { id: 'landuse-school', type: 'fill', ...s('landuse'),
                   filter: ['in', 'class', 'school', 'university'],
-                  paint: { 'fill-color': '#f0e6d0', 'fill-opacity': 0.5 } },
+                  paint: { 'fill-color': '#e2d7c7', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.05, 10, 0.18, 14, 0.26] } },
 
                 // Park
                 { id: 'park-fill', type: 'fill', ...s('park'),
-                  paint: { 'fill-color': '#c8e6aa', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.6, 14, 0.4] } },
+                  paint: { 'fill-color': '#cfe0bb', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.18, 10, 0.28, 14, 0.34] } },
                 { id: 'park-outline', type: 'line', ...s('park'),
                   minzoom: 9,
-                  paint: { 'line-color': '#9ec97a', 'line-width': 1, 'line-dasharray': [4, 2] } },
+                  paint: { 'line-color': '#a8c48a', 'line-width': 1, 'line-dasharray': [4, 2] } },
 
                 // Water
                 { id: 'water-fill', type: 'fill', ...s('water'),
-                  paint: { 'fill-color': '#a0cfdf' } },
+                  paint: { 'fill-color': '#8eaec4', 'fill-opacity': 0.92 } },
                 { id: 'waterway-river', type: 'line', ...s('waterway'),
                   filter: ['==', 'class', 'river'],
-                  paint: { 'line-color': '#a0cfdf', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3] } },
+                  paint: { 'line-color': '#6f98b1', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.6, 10, 1.4, 14, 3.5] } },
                 { id: 'waterway-stream', type: 'line', ...s('waterway'),
                   filter: ['!=', 'class', 'river'],
                   minzoom: 10,
-                  paint: { 'line-color': '#a0cfdf', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 14, 1.5] } },
+                  paint: { 'line-color': '#6f98b1', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 14, 1.5] } },
 
                 // Aeroway
                 { id: 'aeroway-area', type: 'fill', ...s('aeroway'),
@@ -599,70 +262,71 @@
                 // Boundary
                 { id: 'boundary-country', type: 'line', ...s('boundary'),
                   filter: ['==', 'admin_level', 2],
-                  paint: { 'line-color': '#9a8db5', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 10, 2], 'line-dasharray': [5, 2] } },
+                  paint: { 'line-color': '#9d8f7b', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 2, 0.12, 6, 0.26, 12, 0.38], 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.3, 6, 0.7, 12, 1.3], 'line-dasharray': [4, 3] } },
                 { id: 'boundary-state', type: 'line', ...s('boundary'),
                   filter: ['==', 'admin_level', 4],
                   minzoom: 4,
-                  paint: { 'line-color': '#b0a5c5', 'line-width': 0.8, 'line-dasharray': [3, 2] } },
+                  paint: { 'line-color': '#9d8f7b', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.1, 8, 0.2, 12, 0.3], 'line-width': 0.8, 'line-dasharray': [4, 3] } },
 
                 // Building
                 { id: 'building-fill', type: 'fill', ...s('building'),
-                  minzoom: 13,
-                  paint: { 'fill-color': '#ddd5ce', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0.3, 16, 0.7] } },
+                  minzoom: 12.5,
+                  paint: { 'fill-color': '#d1c3ad', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.12, 14, 0.34] } },
                 { id: 'building-outline', type: 'line', ...s('building'),
                   minzoom: 14,
-                  paint: { 'line-color': '#c8bfb5', 'line-width': 0.5 } },
+                  paint: { 'line-color': '#c4b69e', 'line-width': 0.5 } },
 
                 // Roads — casing
                 { id: 'road-motorway-casing', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'motorway'], minzoom: 5,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#c77532', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 14, 8, 18, 20] } },
+                  paint: { 'line-color': '#f8f2e7', 'line-opacity': 0.92, 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2.2, 10, 4.2, 14, 10.5, 18, 20] } },
                 { id: 'road-trunk-casing', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'trunk'], minzoom: 6,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#c78e32', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1, 14, 7, 18, 18] } },
+                  paint: { 'line-color': '#f8f2e7', 'line-opacity': 0.92, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2, 10, 4, 14, 10, 18, 18] } },
                 { id: 'road-primary-casing', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'primary'], minzoom: 7,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#c9b46a', 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1, 14, 6, 18, 16] } },
+                  paint: { 'line-color': '#f8f2e7', 'line-opacity': 0.92, 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.8, 10, 3.6, 14, 9, 18, 16] } },
                 { id: 'road-secondary-casing', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'secondary'], minzoom: 9,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#c0bda8', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 14, 5, 18, 14] } },
+                  paint: { 'line-color': '#f8f2e7', 'line-opacity': 0.92, 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 14, 7, 18, 14] } },
                 { id: 'road-tertiary-casing', type: 'line', ...s('transportation'),
                   filter: ['in', 'class', 'tertiary', 'minor'], minzoom: 11,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#c8c8c8', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 14, 4, 18, 12] } },
+                  paint: { 'line-color': '#f7f1e5', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.2, 14, 5.4, 18, 12] } },
 
                 // Roads — fill
                 { id: 'road-motorway', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'motorway'], minzoom: 5,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#e8933a', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.8, 14, 6, 18, 16] } },
+                  paint: { 'line-color': '#c98f50', 'line-opacity': 0.94, 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.1, 10, 2.3, 14, 7.2, 18, 16] } },
                 { id: 'road-trunk', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'trunk'], minzoom: 6,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#f0b040', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.5, 14, 5, 18, 14] } },
+                  paint: { 'line-color': '#c98f50', 'line-opacity': 0.94, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.8, 10, 2, 14, 6.5, 18, 14] } },
                 { id: 'road-primary', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'primary'], minzoom: 7,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#f0d268', 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 14, 4, 18, 12] } },
+                  paint: { 'line-color': '#d5aa68', 'line-opacity': 0.94, 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.6, 10, 1.8, 14, 5.5, 18, 12] } },
                 { id: 'road-secondary', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'secondary'], minzoom: 9,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 3.5, 18, 10] } },
+                  paint: { 'line-color': '#dcc389', 'line-opacity': 0.94, 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 3.5, 18, 10] } },
                 { id: 'road-tertiary', type: 'line', ...s('transportation'),
                   filter: ['in', 'class', 'tertiary', 'minor'], minzoom: 11,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.3, 14, 2.5, 18, 8] } },
+                  paint: { 'line-color': '#c9b49a', 'line-opacity': 0.92, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.7, 14, 3.4, 18, 8] } },
                 { id: 'road-service', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'service'], minzoom: 13,
                   layout: { 'line-cap': 'round', 'line-join': 'round' },
-                  paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 18, 4] } },
+                  paint: { 'line-color': '#c9b49a', 'line-opacity': 0.92, 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 18, 4] } },
                 { id: 'road-path', type: 'line', ...s('transportation'),
                   filter: ['in', 'class', 'path', 'track'], minzoom: 12,
-                  paint: { 'line-color': '#c07850', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 18, 2], 'line-dasharray': [4, 2] } },
+                  layout: { 'line-cap': 'round', 'line-join': 'round' },
+                  paint: { 'line-color': '#8e6b49', 'line-opacity': 0.78, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 14, 2], 'line-dasharray': [2, 1.5] } },
                 { id: 'road-rail', type: 'line', ...s('transportation'),
                   filter: ['==', 'class', 'rail'], minzoom: 10,
                   paint: { 'line-color': '#b8b8b8', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 14, 1.5] } },
@@ -675,121 +339,367 @@
                   filter: ['==', '$type', 'Point'],
                   layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 12, 8, 16],
                     'text-font': ['Open Sans Italic'], 'text-max-width': 8 },
-                  paint: { 'text-color': '#6b96b0', 'text-halo-color': 'rgba(255,255,255,0.8)', 'text-halo-width': 1.5 } },
+                  paint: { 'text-color': '#4f7592', 'text-halo-color': '#e9e4d7', 'text-halo-width': 1.5 } },
                 { id: 'water-name-line', type: 'symbol', ...s('water_name'),
                   filter: ['==', '$type', 'LineString'],
                   layout: { 'text-field': name, 'text-size': 11, 'text-font': ['Open Sans Italic'],
                     'symbol-placement': 'line', 'text-rotation-alignment': 'map' },
-                  paint: { 'text-color': '#6b96b0', 'text-halo-color': 'rgba(255,255,255,0.8)', 'text-halo-width': 1 } },
+                  paint: { 'text-color': '#4f7592', 'text-halo-color': '#e9e4d7', 'text-halo-width': 1 } },
 
                 // Labels — roads
                 { id: 'road-label-primary', type: 'symbol', ...s('transportation_name'),
-                  filter: ['in', 'class', 'motorway', 'trunk', 'primary'], minzoom: 10,
-                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 9, 14, 12],
-                    'text-font': ['Open Sans Regular'], 'symbol-placement': 'line', 'text-rotation-alignment': 'map', 'text-max-angle': 30 },
-                  paint: { 'text-color': '#5c4a34', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                  filter: ['in', 'class', 'motorway', 'trunk', 'primary'], minzoom: 9,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 12, 11, 14, 13],
+                    'text-font': ['Open Sans Regular'], 'symbol-placement': 'line', 'text-rotation-alignment': 'map', 'text-max-angle': 45, 'text-letter-spacing': 0.02 },
+                  paint: { 'text-color': '#715f4c', 'text-halo-color': '#f4efe7', 'text-halo-width': 1.1 } },
                 { id: 'road-label-secondary', type: 'symbol', ...s('transportation_name'),
                   filter: ['!in', 'class', 'motorway', 'trunk', 'primary'], minzoom: 13,
                   layout: { 'text-field': name, 'text-size': 10, 'text-font': ['Open Sans Regular'],
-                    'symbol-placement': 'line', 'text-rotation-alignment': 'map', 'text-max-angle': 30 },
-                  paint: { 'text-color': '#666', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+                    'symbol-placement': 'line', 'text-rotation-alignment': 'map', 'text-max-angle': 45, 'text-letter-spacing': 0.02 },
+                  paint: { 'text-color': '#715f4c', 'text-halo-color': '#f4efe7', 'text-halo-width': 1.1 } },
 
                 // Mountain peaks
                 { id: 'mountain-peak-point', type: 'circle', ...s('mountain_peak'),
+                  filter: ['<=', ['get', 'rank'], ['step', ['zoom'], 1, 10, 3, 12, 5]],
                   minzoom: 9,
                   paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2, 14, 4],
-                    'circle-color': '#8b6914', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' } },
+                    'circle-color': 'rgba(105, 105, 95, 1)', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' } },
                 { id: 'mountain-peak-label', type: 'symbol', ...s('mountain_peak'),
+                  filter: ['<=', ['get', 'rank'], ['step', ['zoom'], 1, 10, 3, 12, 5]],
                   minzoom: 10,
-                  layout: { 'text-field': ['concat', name, '\n', ['to-string', ['get', 'ele']], ' m'],
-                    'text-size': 10, 'text-font': ['Open Sans Regular'], 'text-offset': [0, 1.2], 'text-anchor': 'top' },
-                  paint: { 'text-color': '#6e5421', 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.5 } },
+                  layout: { 'text-field': ['concat', name, ['case', ['has', 'ele'], ['concat', '\n', ['to-string', ['get', 'ele']], ' m'], '']],
+                    'text-size': ['interpolate', ['linear'], ['zoom'], 8, 10, 12, 12, 14, 13], 'text-font': ['Open Sans Bold'], 'text-offset': [0, 1.2], 'text-anchor': 'top' },
+                  paint: { 'text-color': '#6a4b2d', 'text-halo-color': '#efe9de', 'text-halo-width': 1 } },
 
                 // POI
                 { id: 'poi-label', type: 'symbol', ...s('poi'),
                   minzoom: 14,
                   layout: { 'text-field': name, 'text-size': 10, 'text-font': ['Open Sans Regular'],
                     'text-offset': [0, 0.8], 'text-anchor': 'top', 'text-optional': true },
-                  paint: { 'text-color': '#665', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+                  paint: { 'text-color': '#5d5245', 'text-halo-color': '#f3eee6', 'text-halo-width': 1 } },
 
                 // Aerodrome labels
                 { id: 'aerodrome-label', type: 'symbol', ...s('aerodrome_label'),
-                  minzoom: 10,
-                  layout: { 'text-field': name, 'text-size': 10, 'text-font': ['Open Sans Regular'],
+                  minzoom: 9,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 14, 12],
+                    'text-font': ['Open Sans Bold'], 'text-letter-spacing': 0.08,
                     'text-offset': [0, 0.8], 'text-anchor': 'top' },
-                  paint: { 'text-color': '#555', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+                  paint: { 'text-color': '#4d5965', 'text-halo-color': '#f1eee8', 'text-halo-width': 1 } },
 
                 // House numbers
                 { id: 'housenumber-label', type: 'symbol', ...s('housenumber'),
                   minzoom: 17,
                   layout: { 'text-field': ['get', 'housenumber'], 'text-size': 9, 'text-font': ['Open Sans Regular'] },
-                  paint: { 'text-color': '#999', 'text-halo-color': '#fff', 'text-halo-width': 0.8 } },
+                  paint: { 'text-color': '#8a7e6f', 'text-halo-color': '#f3eee6', 'text-halo-width': 0.8 } },
 
                 // Place labels
                 { id: 'place-country', type: 'symbol', ...s('place'),
                   filter: ['==', 'class', 'country'], maxzoom: 8,
-                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 11, 6, 16],
-                    'text-font': ['Open Sans Bold'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.1, 'text-max-width': 6 },
-                  paint: { 'text-color': '#444', 'text-halo-color': '#fff', 'text-halo-width': 2 } },
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 3, 13, 7, 17, 14, 20],
+                    'text-font': ['Open Sans Bold'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.06, 'text-max-width': 6 },
+                  paint: { 'text-color': '#3c332a', 'text-halo-color': '#f3eee6', 'text-halo-width': 1.4 } },
                 { id: 'place-state', type: 'symbol', ...s('place'),
                   filter: ['==', 'class', 'state'], minzoom: 4, maxzoom: 10,
-                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 4, 9, 8, 13],
-                    'text-font': ['Open Sans Regular'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.08, 'text-max-width': 8 },
-                  paint: { 'text-color': '#666', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 3, 11, 7, 14, 14, 18],
+                    'text-font': ['Open Sans Bold'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.06, 'text-max-width': 8 },
+                  paint: { 'text-color': '#3c332a', 'text-halo-color': '#f3eee6', 'text-halo-width': 1.4 } },
                 { id: 'place-city', type: 'symbol', ...s('place'),
                   filter: ['==', 'class', 'city'], minzoom: 4,
-                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 4, 10, 10, 18, 14, 22],
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 3, 0, 7, 13, 14, 17],
                     'text-font': ['Open Sans Bold'], 'text-max-width': 8 },
-                  paint: { 'text-color': '#333', 'text-halo-color': '#fff', 'text-halo-width': 2 } },
+                  paint: { 'text-color': '#3c332a', 'text-halo-color': '#f3eee6', 'text-halo-width': 1.4 } },
                 { id: 'place-town', type: 'symbol', ...s('place'),
                   filter: ['==', 'class', 'town'], minzoom: 7,
-                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 7, 10, 14, 16],
-                    'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
-                  paint: { 'text-color': '#444', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 7, 11, 14, 14],
+                    'text-font': ['Open Sans Bold'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#3c332a', 'text-halo-color': '#f3eee6', 'text-halo-width': 1.4 } },
                 { id: 'place-village', type: 'symbol', ...s('place'),
-                  filter: ['==', 'class', 'village'], minzoom: 10,
-                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 14],
+                  filter: ['==', 'class', 'village'], minzoom: 9,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 14, 13],
                     'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
-                  paint: { 'text-color': '#555', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } },
+                  paint: { 'text-color': '#5d5245', 'text-halo-color': '#f3eee6', 'text-halo-width': 1 } },
                 { id: 'place-hamlet', type: 'symbol', ...s('place'),
                   filter: ['in', 'class', 'hamlet', 'suburb', 'neighbourhood', 'isolated_dwelling'], minzoom: 12,
                   layout: { 'text-field': name, 'text-size': 11, 'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
-                  paint: { 'text-color': '#666', 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+                  paint: { 'text-color': '#5d5245', 'text-halo-color': '#f3eee6', 'text-halo-width': 1 } },
 
                 // Park labels
                 { id: 'park-label', type: 'symbol', ...s('park'),
-                  filter: ['==', '$type', 'Point'], minzoom: 10,
-                  layout: { 'text-field': name, 'text-size': 11, 'text-font': ['Open Sans Italic'], 'text-max-width': 8 },
-                  paint: { 'text-color': '#3a7a14', 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.5 } },
+                  filter: ['==', '$type', 'Point'], minzoom: 9,
+                  layout: { 'text-field': name, 'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 13, 12], 'text-font': ['Open Sans Regular'], 'text-max-width': 8 },
+                  paint: { 'text-color': '#58714c', 'text-halo-color': '#eef0e7', 'text-halo-width': 0.9 } },
             ];
         }
 
-        function addSquigglyBasemap(tileSourceId, displayName, container) {
-            const style = {
+        // ── Squiggly basemap styles (built statically) ──────────────────────
+        function buildSquigglyStyle(tileSourceId) {
+            return {
                 version: 8,
-                glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
-                sources: {
-                    [tileSourceId]: { type: 'vector', url: `${MARTIN}/${tileSourceId}` },
-                },
+                glyphs: GLYPHS_URL,
+                sources: { [tileSourceId]: { type: 'vector', url: `${MARTIN}/${tileSourceId}` } },
                 layers: buildOutdoorStyle(tileSourceId),
             };
-
-            const key = `squiggly-${tileSourceId}`;
-            BASEMAPS[key] = style;
-
-            const label = document.createElement('label');
-            label.className = 'basemap-option';
-            label.innerHTML = `
-                <input type="radio" name="basemap" value="${key}">
-                ${displayName}
-            `;
-            label.querySelector('input').addEventListener('change', e => {
-                map.setStyle(BASEMAPS[e.target.value]);
-            });
-            container.appendChild(label);
         }
 
-        map.on('load', loadCatalog);
+        BASEMAPS['squiggly-base'] = buildSquigglyStyle('squiggly.v1.base');
+        BASEMAPS['squiggly-base-test'] = buildSquigglyStyle('squiggly.v1.base-test');
+
+        // ── DEM source configs ──────────────────────────────────────────────
+        const TERRAIN_DEM_OPTS = {
+            type: 'raster-dem',
+            tiles: [`${MARTIN}/squiggly.v1.terrain/{z}/{x}/{y}`],
+            encoding: 'terrarium',
+            tileSize: 512,
+            maxzoom: 12,
+            bounds: [146, -37, 155, -27],
+        };
+
+        const TEST_TERRAIN_DEM_OPTS = {
+            type: 'raster-dem',
+            tiles: [`${MARTIN}/squiggly.v1.terrain-test/{z}/{x}/{y}`],
+            encoding: 'terrarium',
+            tileSize: 512,
+            maxzoom: 12,
+            bounds: [146, -37, 147, -36],
+        };
+
+        const R2_TERRAIN_DEM_OPTS = R2_URL ? {
+            type: 'raster-dem',
+            url: `pmtiles://${R2_URL}/squiggly.v1.terrain.pmtiles`,
+            encoding: 'terrarium',
+            tileSize: 512,
+        } : null;
+
+        // ── Contours layer management ───────────────────────────────────────
+        const CONTOUR_LAYERS = {
+            local: { sourceId: 'contours', sourceOpts: { type: 'vector', url: `${MARTIN}/squiggly.v1.contours` } },
+            'local-test': { sourceId: 'contours-test', sourceOpts: { type: 'vector', url: `${MARTIN}/squiggly.v1.contours-test` } },
+        };
+        if (R2_URL) {
+            CONTOUR_LAYERS.r2 = { sourceId: 'r2-contours', sourceOpts: { type: 'vector', url: `pmtiles://${R2_URL}/squiggly.v1.contours.pmtiles` } };
+        }
+
+        function contourLayerIds(sourceId) {
+            return [`${sourceId}-line`, `${sourceId}-label`];
+        }
+
+        function addContourLayers(sourceId, sourceOpts) {
+            if (!map.getSource(sourceId)) {
+                map.addSource(sourceId, sourceOpts);
+            }
+            if (!map.getLayer(`${sourceId}-line`)) {
+                map.addLayer({
+                    id: `${sourceId}-line`,
+                    type: 'line',
+                    source: sourceId,
+                    'source-layer': 'contours',
+                    paint: {
+                        'line-color': '#b5651d',
+                        'line-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0, 9, 0.1, 13, 0.6],
+                        'line-width': ['case', ['==', ['%', ['get', 'elevation'], 100], 0], 1.2, 0.5],
+                    },
+                });
+            }
+            if (!map.getLayer(`${sourceId}-label`)) {
+                map.addLayer({
+                    id: `${sourceId}-label`,
+                    type: 'symbol',
+                    source: sourceId,
+                    'source-layer': 'contours',
+                    filter: ['==', ['%', ['get', 'elevation'], 100], 0],
+                    minzoom: 12,
+                    layout: {
+                        'text-field': ['concat', ['to-string', ['get', 'elevation']], ' m'],
+                        'text-size': 12,
+                        'text-font': ['Open Sans Regular'],
+                        'symbol-placement': 'line',
+                        'text-rotation-alignment': 'map',
+                        'text-max-angle': 30,
+                    },
+                    paint: {
+                        'text-color': '#8B5A2B',
+                        'text-halo-color': 'rgba(255,255,255,0.8)',
+                        'text-halo-width': 2,
+                    },
+                });
+            }
+        }
+
+        function setContourVisibility(sourceId, visible) {
+            const vis = visible ? 'visible' : 'none';
+            for (const layerId of contourLayerIds(sourceId)) {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', vis);
+                }
+            }
+        }
+
+        function applyContours(value) {
+            // Hide all contour layers
+            for (const cfg of Object.values(CONTOUR_LAYERS)) {
+                setContourVisibility(cfg.sourceId, false);
+            }
+            active.contours = value;
+            if (value !== 'none' && CONTOUR_LAYERS[value]) {
+                const cfg = CONTOUR_LAYERS[value];
+                addContourLayers(cfg.sourceId, cfg.sourceOpts);
+                setContourVisibility(cfg.sourceId, true);
+            }
+        }
+
+        // ── Hillshade layer management ──────────────────────────────────────
+        const HILLSHADE_LAYERS = {
+            local: { sourceId: 'terrain-hillshade', sourceOpts: TERRAIN_DEM_OPTS, layerId: 'local-hillshade', type: 'hillshade' },
+            'local-test': { sourceId: 'terrain-test-hillshade', sourceOpts: TEST_TERRAIN_DEM_OPTS, layerId: 'test-hillshade', type: 'hillshade' },
+            esri: {
+                sourceId: 'esri-hillshade',
+                sourceOpts: {
+                    type: 'raster',
+                    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'],
+                    tileSize: 256,
+                    attribution: '© Esri, USGS, NOAA',
+                    maxzoom: 16,
+                },
+                layerId: 'esri-hillshade-layer',
+                type: 'raster',
+            },
+        };
+        if (R2_TERRAIN_DEM_OPTS) {
+            HILLSHADE_LAYERS.r2 = { sourceId: 'r2-terrain-hillshade', sourceOpts: R2_TERRAIN_DEM_OPTS, layerId: 'r2-hillshade', type: 'hillshade' };
+        }
+
+        function insertionPoint() {
+            return map.getStyle().layers.find(l => l.type !== 'background' && l.type !== 'raster' && l.type !== 'hillshade')?.id;
+        }
+
+        function addHillshadeLayer(cfg) {
+            if (!map.getSource(cfg.sourceId)) {
+                map.addSource(cfg.sourceId, cfg.sourceOpts);
+            }
+            if (!map.getLayer(cfg.layerId)) {
+                if (cfg.type === 'hillshade') {
+                    map.addLayer({
+                        id: cfg.layerId,
+                        type: 'hillshade',
+                        source: cfg.sourceId,
+                        paint: {
+                            'hillshade-exaggeration': 0.5,
+                            'hillshade-shadow-color': '#473B24',
+                            'hillshade-highlight-color': '#f6f0df',
+                            'hillshade-accent-color': '#8f7a57',
+                            'hillshade-illumination-direction': 315,
+                        },
+                    }, insertionPoint());
+                } else {
+                    map.addLayer({
+                        id: cfg.layerId,
+                        type: 'raster',
+                        source: cfg.sourceId,
+                        paint: { 'raster-opacity': 0.4, 'raster-resampling': 'linear' },
+                    }, insertionPoint());
+                }
+            }
+        }
+
+        function applyHillshade(value) {
+            // Hide all hillshade layers
+            for (const cfg of Object.values(HILLSHADE_LAYERS)) {
+                if (map.getLayer(cfg.layerId)) {
+                    map.setLayoutProperty(cfg.layerId, 'visibility', 'none');
+                }
+            }
+            active.hillshade = value;
+            if (value !== 'none' && HILLSHADE_LAYERS[value]) {
+                const cfg = HILLSHADE_LAYERS[value];
+                addHillshadeLayer(cfg);
+                map.setLayoutProperty(cfg.layerId, 'visibility', 'visible');
+            }
+        }
+
+        // ── Terrain (3D) management ─────────────────────────────────────────
+        const TERRAIN_SOURCES = {
+            local: { sourceId: 'terrain-3d', sourceOpts: TERRAIN_DEM_OPTS },
+            'local-test': { sourceId: 'terrain-test-3d', sourceOpts: TEST_TERRAIN_DEM_OPTS },
+        };
+        if (R2_TERRAIN_DEM_OPTS) {
+            TERRAIN_SOURCES.r2 = { sourceId: 'r2-terrain-3d', sourceOpts: R2_TERRAIN_DEM_OPTS };
+        }
+
+        function applyTerrain(value) {
+            active.terrain = value;
+            if (value === 'none') {
+                map.setTerrain(null);
+                return;
+            }
+            const cfg = TERRAIN_SOURCES[value];
+            if (!cfg) return;
+            if (!map.getSource(cfg.sourceId)) {
+                map.addSource(cfg.sourceId, cfg.sourceOpts);
+            }
+            map.setTerrain({ source: cfg.sourceId, exaggeration: 1.5 });
+        }
+
+        // ── Re-add overlays after style switch ──────────────────────────────
+        function addOverlays() {
+            if (active.hillshade !== 'none') applyHillshade(active.hillshade);
+            if (active.contours !== 'none') applyContours(active.contours);
+            if (active.terrain !== 'none') applyTerrain(active.terrain);
+        }
+
+        map.on('style.load', addOverlays);
+
+        // ── Maps radio handler ──────────────────────────────────────────────
+        document.querySelectorAll('input[name="maps"]').forEach(radio => {
+            radio.addEventListener('change', e => {
+                map.setStyle(BASEMAPS[e.target.value]);
+            });
+        });
+
+        // ── Contours radio handler ──────────────────────────────────────────
+        document.querySelectorAll('input[name="contours"]').forEach(radio => {
+            radio.addEventListener('change', e => applyContours(e.target.value));
+        });
+
+        // ── Hillshade radio handler ─────────────────────────────────────────
+        document.querySelectorAll('input[name="hillshade"]').forEach(radio => {
+            radio.addEventListener('change', e => applyHillshade(e.target.value));
+        });
+
+        // ── Terrain radio handler ───────────────────────────────────────────
+        document.querySelectorAll('input[name="terrain"]').forEach(radio => {
+            radio.addEventListener('change', e => applyTerrain(e.target.value));
+        });
+
+        // ── R2 dynamic options ──────────────────────────────────────────────
+        if (R2_URL) {
+            // R2 basemap
+            function addR2Radio(container, groupName, value, label) {
+                const el = document.createElement('label');
+                el.className = 'radio-option';
+                el.innerHTML = `<input type="radio" name="${groupName}" value="${value}"> ${label}`;
+                el.querySelector('input').addEventListener('change', e => {
+                    if (groupName === 'maps') map.setStyle(BASEMAPS[e.target.value]);
+                    else if (groupName === 'contours') applyContours(e.target.value);
+                    else if (groupName === 'hillshade') applyHillshade(e.target.value);
+                    else if (groupName === 'terrain') applyTerrain(e.target.value);
+                });
+                container.appendChild(el);
+            }
+
+            // R2 basemap style
+            const r2BaseSourceId = 'squiggly-v1-base-r2';
+            BASEMAPS['r2-base'] = {
+                version: 8,
+                glyphs: GLYPHS_URL,
+                sources: { [r2BaseSourceId]: { type: 'vector', url: `pmtiles://${R2_URL}/squiggly.v1.base.pmtiles` } },
+                layers: buildOutdoorStyle(r2BaseSourceId),
+            };
+
+            addR2Radio(document.getElementById('r2-maps'), 'maps', 'r2-base', 'squiggly.v1.base (R2)');
+            addR2Radio(document.getElementById('r2-contours'), 'contours', 'r2', 'squiggly.v1.contours (R2)');
+            addR2Radio(document.getElementById('r2-hillshade'), 'hillshade', 'r2', 'squiggly.v1.hillshade (R2)');
+            addR2Radio(document.getElementById('r2-terrain'), 'terrain', 'r2', 'squiggly.v1.terrain (R2)');
+        }
     </script>
 </body>
 </html>
