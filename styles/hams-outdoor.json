@@ -5,30 +5,30 @@
   "sources": {
     "base": {
       "type": "vector",
-      "url": "pmtiles://https://pub-f9fd6742ca5c4a45bb2f7e6019f37494.r2.dev/squiggly.v1.base.pmtiles",
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.base.pmtiles",
       "attribution": "&copy; <a href=\"https://www.openmaptiles.org/\" target=\"_blank\">OpenMapTiles</a> &copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors, terrain &copy; Copernicus DEM"
     },
     "contours": {
       "type": "vector",
-      "url": "pmtiles://https://pub-f9fd6742ca5c4a45bb2f7e6019f37494.r2.dev/squiggly.v1.contours.pmtiles"
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.contours.pmtiles"
     },
     "hillshade": {
       "type": "raster-dem",
-      "url": "pmtiles://https://pub-f9fd6742ca5c4a45bb2f7e6019f37494.r2.dev/squiggly.v1.terrain.pmtiles",
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.terrain.pmtiles",
       "encoding": "terrarium",
       "tileSize": 512
     }
   },
   "layers": [
     {
-      "id": "duncan-background",
+      "id": "background",
       "type": "background",
       "paint": {
         "background-color": "#e8e0cf"
       }
     },
     {
-      "id": "duncan-hillshade",
+      "id": "hillshade",
       "type": "hillshade",
       "source": "hillshade",
       "paint": {
@@ -40,7 +40,7 @@
       }
     },
     {
-      "id": "duncan-landcover",
+      "id": "landcover",
       "type": "fill",
       "source": "base",
       "source-layer": "landcover",
@@ -64,7 +64,7 @@
       }
     },
     {
-      "id": "duncan-landuse",
+      "id": "landuse",
       "type": "fill",
       "source": "base",
       "source-layer": "landuse",
@@ -84,7 +84,7 @@
       }
     },
     {
-      "id": "duncan-park",
+      "id": "park",
       "type": "fill",
       "source": "base",
       "source-layer": "park",
@@ -94,7 +94,7 @@
       }
     },
     {
-      "id": "duncan-water",
+      "id": "water",
       "type": "fill",
       "source": "base",
       "source-layer": "water",
@@ -104,7 +104,7 @@
       }
     },
     {
-      "id": "duncan-waterway",
+      "id": "waterway",
       "type": "line",
       "source": "base",
       "source-layer": "waterway",
@@ -126,7 +126,7 @@
       }
     },
     {
-      "id": "duncan-boundary",
+      "id": "boundary",
       "type": "line",
       "source": "base",
       "source-layer": "boundary",
@@ -139,7 +139,7 @@
       }
     },
     {
-      "id": "duncan-buildings",
+      "id": "buildings",
       "type": "fill",
       "source": "base",
       "source-layer": "building",
@@ -150,7 +150,7 @@
       }
     },
     {
-      "id": "duncan-roads-major-casing",
+      "id": "roads-major-casing",
       "type": "line",
       "source": "base",
       "source-layer": "transportation",
@@ -166,7 +166,7 @@
       }
     },
     {
-      "id": "duncan-roads-local-casing",
+      "id": "roads-local-casing",
       "type": "line",
       "source": "base",
       "source-layer": "transportation",
@@ -182,7 +182,7 @@
       }
     },
     {
-      "id": "duncan-roads-major",
+      "id": "roads-major",
       "type": "line",
       "source": "base",
       "source-layer": "transportation",
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": "duncan-roads-local",
+      "id": "roads-local",
       "type": "line",
       "source": "base",
       "source-layer": "transportation",
@@ -222,7 +222,7 @@
       }
     },
     {
-      "id": "duncan-paths",
+      "id": "paths",
       "type": "line",
       "source": "base",
       "source-layer": "transportation",
@@ -243,7 +243,7 @@
       }
     },
     {
-      "id": "duncan-road-labels",
+      "id": "road-labels",
       "type": "symbol",
       "source": "base",
       "source-layer": "transportation_name",
@@ -264,7 +264,7 @@
       }
     },
     {
-      "id": "duncan-water-labels",
+      "id": "water-labels",
       "type": "symbol",
       "source": "base",
       "source-layer": "water_name",
@@ -281,7 +281,7 @@
       }
     },
     {
-      "id": "duncan-park-labels",
+      "id": "park-labels",
       "type": "symbol",
       "source": "base",
       "source-layer": "park",
@@ -298,7 +298,7 @@
       }
     },
     {
-      "id": "duncan-place-major",
+      "id": "place-major",
       "type": "symbol",
       "source": "base",
       "source-layer": "place",
@@ -326,7 +326,7 @@
       }
     },
     {
-      "id": "duncan-place-local",
+      "id": "place-local",
       "type": "symbol",
       "source": "base",
       "source-layer": "place",
@@ -344,7 +344,7 @@
       }
     },
     {
-      "id": "duncan-mountain-peaks",
+      "id": "mountain-peaks",
       "type": "symbol",
       "source": "base",
       "source-layer": "mountain_peak",
@@ -361,7 +361,7 @@
       }
     },
     {
-      "id": "duncan-aerodromes",
+      "id": "aerodromes",
       "type": "symbol",
       "source": "base",
       "source-layer": "aerodrome_label",
