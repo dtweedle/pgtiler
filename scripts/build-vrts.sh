@@ -8,7 +8,7 @@ set -euo pipefail
 #
 # Outputs:
 #   australia-dem.vrt      — all tiles (used by contour generation)
-#   australia-terrain.vrt  — Manilla/Snowy subset (used by terrain generation)
+#   australia-terrain.vrt  — all of Australia (used by terrain generation)
 #
 # With --test, also builds:
 #   australia-dem-test.vrt     — single Bright tile
@@ -25,11 +25,11 @@ if [[ "${1:-}" == "--test" ]]; then
     source "$SCRIPT_DIR/test-config.sh"
 fi
 
-# Terrain subset: Snowy Mountains + 400km radius around Manilla, NSW
-TERRAIN_SOUTH=-37
-TERRAIN_NORTH=-27
-TERRAIN_WEST=146
-TERRAIN_EAST=155
+# Terrain: all of Australia (mainland + Tasmania)
+TERRAIN_SOUTH=-44
+TERRAIN_NORTH=-10
+TERRAIN_WEST=112
+TERRAIN_EAST=154
 
 # ── Preflight checks ────────────────────────────────────────────────────
 
@@ -93,7 +93,7 @@ echo "  australia-dem.vrt — $(grep -c '<SourceFilename' "$PROJECT_DIR/datasets
 
 # Terrain subset VRT — used by terrain tile generation
 echo ""
-echo "  Terrain region (Snowy Mountains + Manilla 400km):"
+echo "  Terrain region (all of Australia):"
 build_vrt "australia-terrain" "$TERRAIN_SOUTH" "$TERRAIN_NORTH" "$TERRAIN_WEST" "$TERRAIN_EAST"
 
 # Test VRTs — single Bright tile
