@@ -122,6 +122,20 @@
         </label>
         <div id="r2-terrain"></div>
 
+        <h2>Stylesheets</h2>
+        <label class="radio-option">
+            <input type="radio" name="stylesheet" value="none" checked>
+            None
+        </label>
+        <label class="radio-option">
+            <input type="radio" name="stylesheet" value="squiggly-outdoor">
+            Squiggly Outdoor
+        </label>
+        <label class="radio-option">
+            <input type="radio" name="stylesheet" value="hams-outdoor">
+            Hams Outdoor
+        </label>
+
         <div id="links">
             <a href="http://localhost:3000/catalog" target="_blank">Tile catalog</a>
         </div>
@@ -133,10 +147,9 @@
         const MARTIN = 'http://localhost:3000';
         const R2_URL = (window.PGTILER_CONFIG && window.PGTILER_CONFIG.R2_PUBLIC_URL) || '';
 
-        if (R2_URL) {
-            const pmtilesProtocol = new pmtiles.Protocol();
-            maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
-        }
+        // Always register PMTiles protocol — stylesheets use pmtiles:// URLs
+        const pmtilesProtocol = new pmtiles.Protocol();
+        maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
 
         const GLYPHS_URL = 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf';
 
@@ -463,6 +476,7 @@
             bounds: [146, -37, 147, -36],
         };
 
+
         const R2_TERRAIN_DEM_OPTS = R2_URL ? {
             type: 'raster-dem',
             url: `pmtiles://${R2_URL}/squiggly.v1.terrain.pmtiles`,
@@ -668,6 +682,28 @@
         // ── Terrain radio handler ───────────────────────────────────────────
         document.querySelectorAll('input[name="terrain"]').forEach(radio => {
             radio.addEventListener('change', e => applyTerrain(e.target.value));
+        });
+
+        // ── Stylesheet radio handler ────────────────────────────────────────
+        const STYLESHEETS = {
+            'squiggly-outdoor': 'styles/squiggly-outdoor.json',
+            'hams-outdoor': 'styles/hams-outdoor.json',
+        };
+
+        document.querySelectorAll('input[name="stylesheet"]').forEach(radio => {
+            radio.addEventListener('change', async e => {
+                const value = e.target.value;
+                if (value === 'none') {
+                    const mapsRadio = document.querySelector('input[name="maps"]:checked');
+                    if (mapsRadio) map.setStyle(BASEMAPS[mapsRadio.value]);
+                    return;
+                }
+                const url = STYLESHEETS[value];
+                if (!url) return;
+                const resp = await fetch(url);
+                const style = await resp.json();
+                map.setStyle(style);
+            });
         });
 
         // ── R2 dynamic options ──────────────────────────────────────────────

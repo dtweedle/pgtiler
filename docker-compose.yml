@@ -21,10 +21,11 @@ services:
       - generate
 
   gdal:
-    image: ghcr.io/osgeo/gdal:alpine-small-latest
+    image: ghcr.io/osgeo/gdal:alpine-normal-latest
     volumes:
       - ./datasets:/data/datasets
       - ./tiles:/data/tiles
+      - ./scripts:/data/scripts:ro
     profiles:
       - tools
 

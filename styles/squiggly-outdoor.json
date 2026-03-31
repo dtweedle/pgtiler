@@ -5,35 +5,32 @@
   "sources": {
     "base": {
       "type": "vector",
-      "url": "pmtiles://TILES_URL/squiggly.v1.base.pmtiles"
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.base.pmtiles"
     },
     "contours": {
       "type": "vector",
-      "url": "pmtiles://TILES_URL/squiggly.v1.contours.pmtiles"
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.contours.pmtiles"
     },
     "hillshade": {
       "type": "raster-dem",
-      "url": "pmtiles://TILES_URL/squiggly.v1.terrain.pmtiles",
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.terrain.pmtiles",
       "encoding": "terrarium",
       "tileSize": 512
     },
-      "terrain": {
+    "terrain": {
       "type": "raster-dem",
-      "url": "pmtiles://TILES_URL/squiggly.v1.terrain.pmtiles",
+      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.terrain.pmtiles",
       "encoding": "terrarium",
       "tileSize": 512
     }
-  },
-  "terrain": {
-    "source": "terrain",
-    "exaggeration": 1
   },
   "layers": [
     {
       "id": "bg",
       "type": "background",
       "paint": {
-        "background-color": "#e8e0cf"
+        "background-color": "#e8e0cf",
+        "background-opacity": 1
       }
     },
     {
@@ -46,6 +43,27 @@
         "hillshade-highlight-color": "#f6f0df",
         "hillshade-accent-color": "#8f7a57",
         "hillshade-illumination-direction": 315
+      }
+    },
+    {
+      "id": "park-fill",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "park",
+      "paint": {
+        "fill-color": "#cfe0bb",
+        "fill-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          6,
+          0.6,
+          14,
+          0.4
+        ]
+      },
+      "layout": {
+        "visibility": "visible"
       }
     },
     {
@@ -69,6 +87,9 @@
           14,
           0.4
         ]
+      },
+      "layout": {
+        "visibility": "visible"
       }
     },
     {
@@ -205,24 +226,6 @@
       }
     },
     {
-      "id": "park-fill",
-      "type": "fill",
-      "source": "base",
-      "source-layer": "park",
-      "paint": {
-        "fill-color": "#cfe0bb",
-        "fill-opacity": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          6,
-          0.6,
-          14,
-          0.4
-        ]
-      }
-    },
-    {
       "id": "park-outline",
       "type": "line",
       "source": "base",
@@ -343,7 +346,17 @@
       ],
       "paint": {
         "line-color": "#9d8f7b",
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.12, 6, 0.26, 12, 0.38],
+        "line-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          2,
+          0.12,
+          6,
+          0.26,
+          12,
+          0.38
+        ],
         "line-width": [
           "interpolate",
           ["linear"],
@@ -369,7 +382,17 @@
       "minzoom": 4,
       "paint": {
         "line-color": "#9d8f7b",
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.1, 8, 0.2, 12, 0.3],
+        "line-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          4,
+          0.1,
+          8,
+          0.2,
+          12,
+          0.3
+        ],
         "line-width": 0.8,
         "line-dasharray": [4, 3]
       }
@@ -402,82 +425,6 @@
       "paint": {
         "line-color": "#c4b69e",
         "line-width": 0.5
-      }
-    },
-    {
-      "id": "contours-line",
-      "type": "line",
-      "source": "contours",
-      "source-layer": "contours",
-      "paint": {
-        "line-color": "#b5651d",
-        "line-opacity": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          7,
-          0,
-          9,
-          0.1,
-          13,
-          0.6
-        ],
-        "line-width": [
-          "case",
-          [
-            "==",
-            [
-              "%",
-              ["get", "elevation"],
-              100
-            ],
-            0
-          ],
-          1.2,
-          0.5
-        ]
-      },
-      "minzoom": 0,
-      "layout": {
-        "visibility": "visible"
-      }
-    },
-    {
-      "id": "contour-label",
-      "type": "symbol",
-      "source": "contours",
-      "source-layer": "contours",
-      "filter": [
-        "==",
-        [
-          "%",
-          ["get", "elevation"],
-          100
-        ],
-        0
-      ],
-      "minzoom": 12,
-      "layout": {
-        "text-field": [
-          "concat",
-          [
-            "to-string",
-            ["get", "elevation"]
-          ],
-          " m"
-        ],
-        "text-font": [
-          "Open Sans Regular"
-        ],
-        "symbol-placement": "line",
-        "text-rotation-alignment": "map",
-        "text-max-angle": 30,
-        "text-size": 12
-      },
-      "paint": {
-        "text-color": "#8B5A2B",
-        "text-halo-color": "rgba(255,255,255,0.8)",
-        "text-halo-width": 2
       }
     },
     {
@@ -832,20 +779,21 @@
         "path",
         "track"
       ],
-      "minzoom": 12,
+      "minzoom": 14,
       "layout": {
         "line-cap": "round",
-        "line-join": "round"
+        "line-join": "round",
+        "visibility": "visible"
       },
       "paint": {
-        "line-color": "#8e6b49",
+        "line-color": "rgba(103, 103, 103, 1)",
         "line-opacity": 0.78,
         "line-width": [
           "interpolate",
           ["linear"],
           ["zoom"],
-          12,
-          0.8,
+          8,
+          2,
           18,
           2
         ],
@@ -991,7 +939,8 @@
         ],
         "symbol-placement": "line",
         "text-rotation-alignment": "map",
-        "text-max-angle": 30
+        "text-max-angle": 30,
+        "visibility": "visible"
       },
       "paint": {
         "text-color": "#715f4c",
@@ -1024,7 +973,8 @@
         ],
         "symbol-placement": "line",
         "text-rotation-alignment": "map",
-        "text-max-angle": 30
+        "text-max-angle": 30,
+        "visibility": "visible"
       },
       "paint": {
         "text-color": "#715f4c",
@@ -1086,14 +1036,14 @@
           ]
         ],
         "text-size": 14,
-        "text-font": [
-          "Open Sans Regular"
-        ],
+        "text-font": ["Open Sans Bold"],
         "text-offset": [0, 1.2],
         "text-anchor": "top",
         "visibility": "visible",
         "text-max-width": 20,
-        "icon-size": 1
+        "icon-size": 1,
+        "text-transform": "none",
+        "text-optional": false
       },
       "paint": {
         "text-color": "#6a4b2d",
@@ -1368,6 +1318,85 @@
         "text-halo-color": "#eef0e7",
         "text-halo-width": 0.9
       }
+    },
+    {
+      "id": "contour-label",
+      "type": "symbol",
+      "source": "contours",
+      "source-layer": "contours",
+      "filter": [
+        "==",
+        [
+          "%",
+          ["get", "elevation"],
+          100
+        ],
+        0
+      ],
+      "minzoom": 12,
+      "layout": {
+        "text-field": [
+          "concat",
+          [
+            "to-string",
+            ["get", "elevation"]
+          ],
+          " m"
+        ],
+        "text-font": [
+          "Open Sans Regular"
+        ],
+        "symbol-placement": "line",
+        "text-rotation-alignment": "map",
+        "text-max-angle": 30,
+        "text-size": 12
+      },
+      "paint": {
+        "text-color": "#8B5A2B",
+        "text-halo-color": "rgba(255,255,255,0.8)",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "contours-line",
+      "type": "line",
+      "source": "contours",
+      "source-layer": "contours",
+      "paint": {
+        "line-color": "#b5651d",
+        "line-opacity": [
+          "interpolate",
+          ["exponential", 2],
+          ["zoom"],
+          9,
+          0,
+          11,
+          0.6
+        ],
+        "line-width": [
+          "case",
+          [
+            "==",
+            [
+              "%",
+              ["get", "elevation"],
+              100
+            ],
+            0
+          ],
+          1.2,
+          0.5
+        ]
+      },
+      "minzoom": 0,
+      "layout": {
+        "visibility": "visible"
+      }
     }
-  ]
+  ],
+  "terrain": {
+    "source": "terrain",
+    "exaggeration": 1
+  },
+  "id": "b0dknag"
 }

@@ -23,4 +23,7 @@ echo "Serving preview at http://localhost:${PORT}"
 if [[ -n "${R2_PUBLIC_URL:-}" ]]; then
     echo "R2 layers enabled: ${R2_PUBLIC_URL}"
 fi
+# Symlink styles into preview dir so they're accessible at /styles/
+ln -sfn "$ROOT/styles" "$ROOT/preview/styles"
+
 python3 -m http.server "$PORT" --directory "$ROOT/preview"
