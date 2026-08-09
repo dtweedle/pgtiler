@@ -99,8 +99,8 @@ Martin auto-serves any `.pmtiles` or `.mbtiles` file in `tiles/`. The filename (
 - `squiggly.v1.terrain` — RGB-encoded DEM (terrarium encoding, for hillshade + 3D)
 
 **VRT files (built by `build-vrts.sh`):**
-- `australia-dem.vrt` — all Copernicus tiles (~1450), used by contour generation
-- `australia-terrain.vrt` — Manilla/Snowy subset (~90 tiles), used by terrain generation
+- `australia-dem.vrt` — all Copernicus tiles (868), used by contour generation
+- `australia-terrain.vrt` — all of Australia (same 868 tiles), used by terrain generation
 
 **Processing pipelines (all Dockerised):**
 - OSM: `Geofabrik .osm.pbf → Planetiler → .pmtiles`

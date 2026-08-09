@@ -1,7 +1,9 @@
 # Caching
 
 How a tile request is cached on its way from R2 to a browser, what each layer
-does, and which parts of this are verified versus assumed.
+does, and which parts of this are verified versus assumed. How the archives are
+built is [GENERATION.md](GENERATION.md); how a tile reaches the screen is
+[SERVING.md](SERVING.md).
 
 The short version: the PMTiles archives are 1.2–4.8 GB, which is far too large
 for Cloudflare to cache. Serving them directly meant every request travelled the

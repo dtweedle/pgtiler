@@ -14,4 +14,6 @@ mkdir -p "$ROOT/datasets/sources" "$ROOT/datasets/tmp" "$ROOT/tiles"
 
 echo ""
 echo "=== Init complete ==="
-echo "Run ./scripts/generate.sh to build tiles."
+echo "Next: ./scripts/generate-osm-tiles.sh        — OSM base map"
+echo "      ./scripts/download-copernicus-dem.sh  — elevation data"
+echo "      ./scripts/build-vrts.sh               — then contours + terrain"

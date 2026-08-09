@@ -1,8 +1,9 @@
 # Serving
 
 How a map tile gets from a generated archive to a pixel on screen. Covers the
-data path and the URL scheme; the cache layers that sit along that path are in
-[CACHING.md](CACHING.md).
+data path and the URL scheme; the cache layers along that path are in
+[CACHING.md](CACHING.md), and how the archives are built in
+[GENERATION.md](GENERATION.md).
 
 ---
 
