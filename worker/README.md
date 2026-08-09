@@ -48,8 +48,7 @@ map load, and hands out the current version. So a redeploy propagates in minutes
 
 `{archive}` is the object name without `.pmtiles` — e.g. `squiggly.v1.base`.
 `{ext}` must match the archive's tile type: `.mvt` for vector, `.png` for the
-terrain DEM. Vector tiles are re-gzipped on the way out; raster tiles are served
-as-is. A tile that isn't in the archive returns `204`, which is cached too.
+terrain DEM. Tile bytes are served **uncompressed** — see Compression below. A tile that isn't in the archive returns `204`, which is cached too.
 
 A request at a *superseded* version is answered from the current archive rather
 than 404'd — a client whose map is already open keeps working through a redeploy
@@ -152,16 +151,15 @@ First time: `cd worker && npx wrangler login`.
 `dev` and `production` are configured identically in `wrangler.toml` and read
 the same bucket, so dev exercises the real archives and their multipart ETags.
 
-**One thing dev cannot test: edge caching.** The Cache API is a no-op on
-`*.workers.dev` — `cache.put` silently does nothing and every tile reports
-`X-Tile-Cache: miss` however often it is requested. Use `--local` for that;
-miniflare implements the Cache API, so hits register there. The three modes
-cover the surface between them:
+Edge caching **does** work on `*.workers.dev` — verified against this
+deployment, `X-Tile-Cache` goes `miss` then `hit` and Cloudflare reports
+`CF-Cache-Status: HIT` alongside it. The only thing dev does not reproduce is
+the production hostname.
 
 | | Multipart ETags | Edge caching |
 |---|:---:|:---:|
 | `--local` | ✗ (single-part MD5) | ✓ |
-| `dev` (workers.dev) | ✓ | ✗ |
+| `dev` (workers.dev) | ✓ | ✓ |
 | `production` | ✓ | ✓ | That is the
 point: dev exercises the real archives, including their multipart ETags, which
 no local emulation reproduces. The worker only reads, so pointing dev at

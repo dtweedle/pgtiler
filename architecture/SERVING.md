@@ -176,8 +176,7 @@ What happens when MapLibre needs a tile in production:
    map load.
 4. **Worker resolves the tile.** Checks the allowlist, parses the path, opens
    the archive through the R2 binding, walks header → directories → tile data,
-   and returns the bytes. Vector tiles are re-gzipped on the way out; PNG is
-   passed through, being already compressed.
+   and returns the bytes uncompressed — see Compression below.
 5. **Absent tiles return 204**, not 404. An empty area of the archive is a
    normal, cacheable answer.
 
@@ -223,9 +222,38 @@ This is the highest-fidelity test short of production — a real browser, real
 concurrency, real CORS, real archives — and the only one that exercises MapLibre
 actually rendering. Two caveats:
 
-- **Edge caching is absent on `*.workers.dev`** (CACHING.md, layer 2), so every
-  tile request reaches R2. Panning a map is a few hundred real R2 reads.
+- **Edge caching works here** (CACHING.md, layer 2), so a second pan over the
+  same area is served from cache rather than R2.
 - **CORS** is handled by the worker's `CORS_ORIGIN` var, `*` by default.
+
+---
+
+## Compression
+
+**The worker serves tile bytes uncompressed and lets the edge handle encoding.**
+
+It used to gzip vector tiles itself and set `Content-Encoding: gzip`. That is
+broken on Cloudflare: the platform strips a manually-set `Content-Encoding` from
+a Worker response while leaving the body encoded, so clients receive gzip bytes
+labelled `application/vnd.mapbox-vector-tile` and MapLibre's protobuf parser
+fails on them. Observed on both the cache-miss and cache-hit paths, and for
+every `Accept-Encoding` value including `identity`.
+
+Two consequences worth knowing:
+
+- **Cloudflare is not currently compressing MVT on the way out either.** `.mvt`
+  is not in its default auto-compress set, so tiles go over the wire as raw
+  protobuf. Measured cost on real tiles is **~1.4–1.6× larger** than gzip —
+  smaller than it sounds, because tippecanoe has already simplified the
+  geometry. A Compression Rule in the dashboard matching
+  `application/vnd.mapbox-vector-tile` would recover it if the bandwidth
+  matters.
+- **PNG terrain tiles are unaffected** — they were never compressed by the
+  worker and are already compressed as a format.
+
+The rule generalises: don't set `Content-Encoding` on a Worker response. There
+is a regression test asserting tile bodies carry no gzip magic
+(`tile-service.test.ts`).
 
 ---
 

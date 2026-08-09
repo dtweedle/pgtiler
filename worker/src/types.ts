@@ -91,8 +91,6 @@ export type TileResult =
       kind: "tile";
       body: ArrayBuffer;
       contentType: string;
-      /** Set when the body was gzipped on the way out (vector tiles only). */
-      encoding?: "gzip";
       /** Version that actually produced these bytes. */
       version: string;
       /** True when the request's version matches the bytes, so the URL is content-addressed. */

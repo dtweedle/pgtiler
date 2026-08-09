@@ -1,8 +1,11 @@
 /**
- * Gzip helpers built on the platform's streaming compression.
+ * Decompression for pmtiles' internal directory pages.
  *
- * Both Workers and Node 18+ provide CompressionStream/DecompressionStream, so
- * these run unchanged under vitest without a workerd runtime.
+ * Response bodies are NOT compressed here — the edge handles that. See
+ * tile-service.ts for why.
+ *
+ * Both Workers and Node 18+ provide DecompressionStream, so this runs
+ * unchanged under vitest without a workerd runtime.
  */
 
 import { Compression } from "pmtiles";
@@ -17,10 +20,6 @@ export async function decompress(
     return pipe(buf, new DecompressionStream("gzip"));
   }
   throw new Error(`Unsupported compression: ${compression}`);
-}
-
-export async function gzip(buf: ArrayBuffer): Promise<ArrayBuffer> {
-  return pipe(buf, new CompressionStream("gzip"));
 }
 
 async function pipe(

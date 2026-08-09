@@ -42,12 +42,3 @@ export function contentType(tileType: TileType): string {
   }
 }
 
-/**
- * Whether tiles of this type benefit from gzip on the way out.
- *
- * pmtiles hands back decompressed bytes. Vector tiles are protobuf and compress
- * well; image formats are already compressed and would only burn CPU.
- */
-export function shouldGzip(tileType: TileType): boolean {
-  return tileType === TileType.Mvt;
-}

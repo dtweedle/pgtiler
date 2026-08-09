@@ -136,6 +136,5 @@ function buildTileResponse(
   if (result.kind === "empty") return new Response(null, { status: 204, headers });
 
   headers.set("Content-Type", result.contentType);
-  if (result.encoding) headers.set("Content-Encoding", result.encoding);
   return new Response(result.body, { status: 200, headers });
 }

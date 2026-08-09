@@ -175,13 +175,11 @@ Two consequences:
 - **Cache API storage is per-PoP.** A tile warmed in Sydney is a miss in Perth.
   R2 read volume scales with (unique tiles × PoPs receiving traffic), not unique
   tiles.
-- **The Cache API is a no-op on `*.workers.dev`.** `cache.put` silently does
-  nothing and `cache.match` always misses, so every tile reports
-  `X-Tile-Cache: miss` no matter how many times it is requested. The dev
-  environment is on workers.dev, so **layer 2 of this document does not exist
-  there** — a `miss` on dev proves nothing, and edge-cache behaviour has to be
-  verified with `deploy-worker.sh --local` (miniflare does implement the Cache
-  API) or in production.
+- **Edge caching works on `*.workers.dev`.** Older Cloudflare guidance said the
+  Cache API was a no-op there; that is not what this worker observes. Against
+  the dev deployment `X-Tile-Cache` goes `miss` then `hit`, with
+  `CF-Cache-Status: HIT` and a rising `Age` from Cloudflare's own CDN layer.
+  Dev therefore exercises both cache layers, not just the archive reads.
 
 ### Layer 3 — Worker isolate memory
 
@@ -342,11 +340,38 @@ Confirmed by running the Worker against a local R2 emulation:
 - A tile at the current version returns `immutable`; a wrong or absent version
   returns `max-age=60`.
 - Repeat requests report `X-Tile-Cache: hit`.
-- Vector tiles are re-gzipped on the way out; absent tiles return `204`.
+- Tile bytes are served uncompressed (see SERVING.md → Compression); absent
+  tiles return `204`.
 - Swapping the object underneath a warm isolate and immediately requesting the
   old version returns `max-age=60`, not `immutable` — the stale-isolate fix.
 
 ---
+
+## Hazard: a bad deploy pins itself for a year
+
+`immutable, max-age=31536000` is only safe while the bytes under a version URL
+are correct. If a deploy serves *wrong* bytes — the `Content-Encoding` bug in
+SERVING.md did exactly this — every tile requested during that window is cached
+at the edge, and in browsers, under a URL that will not change until the archive
+is re-uploaded and its ETag moves. Fixing the code does not evict them.
+
+There is no cheap purge for this. `caches.default` has no zone-wide purge on a
+`*.workers.dev` hostname, and the version segment is derived from the archive
+ETag rather than from anything deploy-time, so a code fix alone cannot mint new
+URLs. Options, in order of cost:
+
+1. **Accept it in dev.** Only tiles actually requested during the bad window are
+   poisoned, and dev is disposable.
+2. **Re-upload the archive.** Changes the ETag, hence every version code, hence
+   every URL. Heavy — gigabytes — but total.
+3. **Add a cache-key salt.** An env var folded into the `cache.put` key would let
+   a bad deploy be invalidated by bumping a string. Not implemented; the obvious
+   escape hatch if this ever bites in production.
+
+The practical mitigation is the one already in place: `--local` and `dev` both
+run the full test suite and can be exercised before anything reaches the
+production hostname. Verify tile *bytes*, not just status codes — a 200 with the
+wrong encoding is exactly the failure that pins itself.
 
 ## Debugging
 

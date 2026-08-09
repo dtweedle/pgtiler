@@ -84,24 +84,27 @@ describe("getTileJson", () => {
 });
 
 describe("getTile", () => {
-  it("returns a gzipped vector tile at the current version", async () => {
+  it("returns an uncompressed vector tile at the current version", async () => {
     const { tiles } = setup();
     const result = await tiles.getTile("base", V1, PRESENT.z, PRESENT.x, PRESENT.y, "mvt");
 
     expect(result).toMatchObject({
       kind: "tile",
       contentType: "application/vnd.mapbox-vector-tile",
-      encoding: "gzip",
       version: V1,
       contentAddressed: true,
     });
 
-    // Really gzip, not just a header claiming so.
+    // Compression is the edge's job. Setting Content-Encoding on a Worker
+    // response gets the header stripped while the body stays encoded, so
+    // clients receive gzip bytes labelled as plain MVT. Assert we hand back
+    // raw protobuf — no gzip magic — so that can't regress.
     const body = new Uint8Array((result as { body: ArrayBuffer }).body);
-    expect([body[0], body[1]]).toEqual([0x1f, 0x8b]);
+    expect([body[0], body[1]]).not.toEqual([0x1f, 0x8b]);
+    expect(body.byteLength).toBeGreaterThan(0);
   });
 
-  it("does not gzip a raster tile", async () => {
+  it("passes a raster tile through as PNG", async () => {
     const { tiles } = setup(rasterBytes);
     const result = await tiles.getTile(
       "base",
@@ -113,8 +116,9 @@ describe("getTile", () => {
     );
 
     expect(result).toMatchObject({ kind: "tile", contentType: "image/png" });
-    // Already-compressed formats are passed through untouched.
-    expect((result as { encoding?: string }).encoding).toBeUndefined();
+    // PNG magic — bytes reach the client untouched.
+    const body = new Uint8Array((result as { body: ArrayBuffer }).body);
+    expect([...body.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
   });
 
   it("reports an absent tile as empty rather than an error", async () => {

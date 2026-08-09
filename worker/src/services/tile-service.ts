@@ -10,8 +10,7 @@
 import { TileType } from "pmtiles";
 
 import type { Config, TileJsonResult, TileResult } from "../types";
-import { contentType, shouldGzip, tileExt } from "../utils/tile-format";
-import { gzip } from "../utils/compression";
+import { contentType, tileExt } from "../utils/tile-format";
 import { versionCode } from "../utils/version";
 import type { ArchiveStore, OpenArchive } from "./archive-store";
 
@@ -100,18 +99,14 @@ export class TileService {
       return { kind: "empty", version, contentAddressed };
     }
 
-    let body: ArrayBuffer = tile.data;
-    let encoding: "gzip" | undefined;
-    if (shouldGzip(header.tileType)) {
-      body = await gzip(body);
-      encoding = "gzip";
-    }
-
+    // Deliberately NOT compressed here. Setting Content-Encoding on a Worker
+    // response gets the header stripped at the edge while the body stays
+    // encoded — clients then receive gzip bytes labelled as plain MVT and fail
+    // to parse them. Compression is the edge's job; we hand it plain bytes.
     return {
       kind: "tile",
-      body,
+      body: tile.data,
       contentType: contentType(header.tileType),
-      encoding,
       version,
       contentAddressed,
     };

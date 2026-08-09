@@ -109,9 +109,11 @@ describe("tile responses", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toContain("immutable");
-    expect(res.headers.get("Content-Encoding")).toBe("gzip");
     expect(res.headers.get("X-Tile-Version")).toBe(V);
     expect(res.headers.get("X-Tile-Cache")).toBe("miss");
+    // Never set Content-Encoding: the edge strips the header but keeps the
+    // body encoded, so clients get gzip bytes labelled as plain MVT.
+    expect(res.headers.get("Content-Encoding")).toBeNull();
   });
 
   it("serves an unversioned tile with a short TTL", async () => {

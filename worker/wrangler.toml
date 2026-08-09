@@ -29,10 +29,9 @@ enabled = true
 name = "pgtiler-tiles-dev"
 workers_dev = true
 
-# NOTE: the Cache API is a no-op on *.workers.dev — `cache.put` silently does
-# nothing and every tile reports X-Tile-Cache: miss no matter how often it is
-# requested. Dev therefore exercises everything EXCEPT edge caching; use
-# `deploy-worker.sh --local` (miniflare implements the Cache API) to test that.
+# Edge caching does work here: X-Tile-Cache goes miss → hit on workers.dev,
+# and Cloudflare's own CDN reports CF-Cache-Status: HIT alongside it. Verified
+# against this deployment, contrary to the older platform limitation.
 
 [[env.dev.r2_buckets]]
 binding = "BUCKET"
