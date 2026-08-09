@@ -5,16 +5,16 @@
   "sources": {
     "base": {
       "type": "vector",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.base.pmtiles",
+      "url": "https://maps.tweed.nz/squiggly.v1.base.json",
       "attribution": "&copy; <a href=\"https://www.openmaptiles.org/\" target=\"_blank\">OpenMapTiles</a> &copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors, terrain &copy; Copernicus DEM"
     },
     "contours": {
       "type": "vector",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.contours.pmtiles"
+      "url": "https://maps.tweed.nz/squiggly.v1.contours.json"
     },
     "hillshade": {
       "type": "raster-dem",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.terrain.pmtiles",
+      "url": "https://maps.tweed.nz/squiggly.v1.terrain.json",
       "encoding": "terrarium",
       "tileSize": 512
     }

@@ -5,21 +5,21 @@
   "sources": {
     "base": {
       "type": "vector",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.base.pmtiles"
+      "url": "https://maps.tweed.nz/squiggly.v1.base.json"
     },
     "contours": {
       "type": "vector",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.contours.pmtiles"
+      "url": "https://maps.tweed.nz/squiggly.v1.contours.json"
     },
     "hillshade": {
       "type": "raster-dem",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.terrain.pmtiles",
+      "url": "https://maps.tweed.nz/squiggly.v1.terrain.json",
       "encoding": "terrarium",
       "tileSize": 512
     },
     "terrain": {
       "type": "raster-dem",
-      "url": "pmtiles://https://maps.tweed.nz/squiggly.v1.terrain.pmtiles",
+      "url": "https://maps.tweed.nz/squiggly.v1.terrain.json",
       "encoding": "terrarium",
       "tileSize": 512
     }

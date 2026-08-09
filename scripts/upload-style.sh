@@ -2,12 +2,18 @@
 set -euo pipefail
 
 # Build and upload the squiggly-outdoor style JSON to R2.
-# Replaces the TILES_URL placeholder with the actual R2 public URL.
+#
+# The style's source URLs point at the tile worker (scripts/deploy-worker.sh),
+# which serves TileJSON + individual tiles out of the PMTiles archives. This
+# script rewrites the host in those URLs to whatever R2_PUBLIC_URL is set to.
 #
 # Configuration (set in .env or export before running):
 #   R2_REMOTE      — rclone remote name (default: r2)
 #   R2_BUCKET      — R2 bucket name (required)
-#   R2_PUBLIC_URL  — public URL for the R2 bucket (required)
+#   R2_PUBLIC_URL  — public URL the tile worker is served on (required)
+
+# Host baked into styles/*.json; replaced with R2_PUBLIC_URL on upload.
+STYLE_DEFAULT_HOST="https://maps.tweed.nz"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -58,8 +64,8 @@ STYLE_SRC="$STYLES_DIR/squiggly-outdoor.json"
 STYLE_OUT=$(mktemp)
 trap 'rm -f "$STYLE_OUT"' EXIT
 
-# Replace placeholder with actual R2 URL
-sed "s|TILES_URL|${R2_PUBLIC_URL}|g" "$STYLE_SRC" > "$STYLE_OUT"
+# Point the style's sources at the configured tile worker host
+sed "s|${STYLE_DEFAULT_HOST}|${R2_PUBLIC_URL%/}|g" "$STYLE_SRC" > "$STYLE_OUT"
 
 name="squiggly-outdoor.json"
 echo "  ↑ ${name}..."

@@ -6,7 +6,6 @@
     <title>pgtiler — Local Preview</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" />
     <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
-    <script src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
     <script src="config.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -147,9 +146,8 @@
         const MARTIN = 'http://localhost:3000';
         const R2_URL = (window.PGTILER_CONFIG && window.PGTILER_CONFIG.R2_PUBLIC_URL) || '';
 
-        // Always register PMTiles protocol — stylesheets use pmtiles:// URLs
-        const pmtilesProtocol = new pmtiles.Protocol();
-        maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
+        // Tiles come from the R2 worker as plain TileJSON + XYZ tiles — no
+        // pmtiles:// protocol, no Range requests from the browser.
 
         const GLYPHS_URL = 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf';
 
@@ -479,7 +477,7 @@
 
         const R2_TERRAIN_DEM_OPTS = R2_URL ? {
             type: 'raster-dem',
-            url: `pmtiles://${R2_URL}/squiggly.v1.terrain.pmtiles`,
+            url: `${R2_URL}/squiggly.v1.terrain.json`,
             encoding: 'terrarium',
             tileSize: 512,
         } : null;
@@ -490,7 +488,7 @@
             'local-test': { sourceId: 'contours-test', sourceOpts: { type: 'vector', url: `${MARTIN}/squiggly.v1.contours-test` } },
         };
         if (R2_URL) {
-            CONTOUR_LAYERS.r2 = { sourceId: 'r2-contours', sourceOpts: { type: 'vector', url: `pmtiles://${R2_URL}/squiggly.v1.contours.pmtiles` } };
+            CONTOUR_LAYERS.r2 = { sourceId: 'r2-contours', sourceOpts: { type: 'vector', url: `${R2_URL}/squiggly.v1.contours.json` } };
         }
 
         function contourLayerIds(sourceId) {
@@ -727,7 +725,7 @@
             BASEMAPS['r2-base'] = {
                 version: 8,
                 glyphs: GLYPHS_URL,
-                sources: { [r2BaseSourceId]: { type: 'vector', url: `pmtiles://${R2_URL}/squiggly.v1.base.pmtiles` } },
+                sources: { [r2BaseSourceId]: { type: 'vector', url: `${R2_URL}/squiggly.v1.base.json` } },
                 layers: buildOutdoorStyle(r2BaseSourceId),
             };
 
