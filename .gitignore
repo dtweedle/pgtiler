@@ -15,3 +15,7 @@ preview/config.js
 
 # macOS
 .DS_Store
+
+# Cloudflare Worker build/state
+worker/node_modules/
+worker/.wrangler/
