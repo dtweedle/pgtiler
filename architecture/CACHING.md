@@ -177,10 +177,11 @@ Two consequences:
   tiles.
 - **The Cache API is a no-op on `*.workers.dev`.** `cache.put` silently does
   nothing and `cache.match` always misses, so every tile reports
-  `X-Tile-Cache: miss` no matter how many times it is requested. This is why the
-  dev environment is deployed to `maps-dev.tweed.nz` rather than a workers.dev
-  subdomain — on workers.dev the layer this document is mostly about does not
-  exist, and a real caching bug would be indistinguishable from the platform.
+  `X-Tile-Cache: miss` no matter how many times it is requested. The dev
+  environment is on workers.dev, so **layer 2 of this document does not exist
+  there** — a `miss` on dev proves nothing, and edge-cache behaviour has to be
+  verified with `deploy-worker.sh --local` (miniflare does implement the Cache
+  API) or in production.
 
 ### Layer 3 — Worker isolate memory
 

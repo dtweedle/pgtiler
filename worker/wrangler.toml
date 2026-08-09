@@ -1,6 +1,6 @@
 # Two deploy targets, deliberately identical in configuration.
 #
-#   dev         → maps-dev.tweed.nz
+#   dev         → pgtiler-tiles-dev.<subdomain>.workers.dev
 #   production  → maps.tweed.nz (once the custom domain is moved off the bucket)
 #
 # Both read the same R2 bucket and carry the same vars, so dev exercises the real
@@ -27,16 +27,12 @@ enabled = true
 
 [env.dev]
 name = "pgtiler-tiles-dev"
+workers_dev = true
 
-# Deliberately NOT on *.workers.dev: the Cache API is a no-op there, so
-# `cache.put` silently does nothing and every tile reports X-Tile-Cache: miss.
-# Edge caching is the whole point of this worker, so dev needs a real zone to
-# test against. Wrangler provisions the DNS record on first deploy.
-workers_dev = false
-
-[[env.dev.routes]]
-pattern = "maps-dev.tweed.nz"
-custom_domain = true
+# NOTE: the Cache API is a no-op on *.workers.dev — `cache.put` silently does
+# nothing and every tile reports X-Tile-Cache: miss no matter how often it is
+# requested. Dev therefore exercises everything EXCEPT edge caching; use
+# `deploy-worker.sh --local` (miniflare implements the Cache API) to test that.
 
 [[env.dev.r2_buckets]]
 binding = "BUCKET"

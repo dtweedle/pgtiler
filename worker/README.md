@@ -141,7 +141,7 @@ only `wrangler dev --remote` proves it end to end against R2.
 
 ```bash
 # from the repo root
-./scripts/deploy-worker.sh dev             # deploy to maps-dev.tweed.nz
+./scripts/deploy-worker.sh dev             # deploy to *.workers.dev
 ./scripts/deploy-worker.sh production      # deploy to maps.tweed.nz
 ./scripts/deploy-worker.sh --local         # run on :8787, local R2 emulation
 ./scripts/deploy-worker.sh --local-remote  # run on :8787, real R2 bucket
@@ -150,10 +150,19 @@ only `wrangler dev --remote` proves it end to end against R2.
 First time: `cd worker && npx wrangler login`.
 
 `dev` and `production` are configured identically in `wrangler.toml` and read
-the same bucket — dev differs only in worker name and hostname. Dev is on a
-custom domain rather than `*.workers.dev` because **the Cache API is a no-op on
-workers.dev**: `cache.put` silently does nothing and every tile would report
-`X-Tile-Cache: miss`, which would make edge caching untestable. That is the
+the same bucket, so dev exercises the real archives and their multipart ETags.
+
+**One thing dev cannot test: edge caching.** The Cache API is a no-op on
+`*.workers.dev` — `cache.put` silently does nothing and every tile reports
+`X-Tile-Cache: miss` however often it is requested. Use `--local` for that;
+miniflare implements the Cache API, so hits register there. The three modes
+cover the surface between them:
+
+| | Multipart ETags | Edge caching |
+|---|:---:|:---:|
+| `--local` | ✗ (single-part MD5) | ✓ |
+| `dev` (workers.dev) | ✓ | ✗ |
+| `production` | ✓ | ✓ | That is the
 point: dev exercises the real archives, including their multipart ETags, which
 no local emulation reproduces. The worker only reads, so pointing dev at
 production data is safe.

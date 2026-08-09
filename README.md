@@ -272,7 +272,7 @@ Production tiles live in an R2 bucket and are served by a Cloudflare Worker
 1. Install [rclone](https://rclone.org/) and configure an R2 remote (see `scripts/upload-tiles.sh` header for setup steps)
 2. Copy `.env.example` to `.env` and fill in `R2_BUCKET` and `R2_PUBLIC_URL`
 3. `./scripts/upload-tiles.sh` — uploads all non-test `.pmtiles` files from `tiles/`
-4. `./scripts/deploy-worker.sh dev` — deploys the tile worker to `maps-dev.tweed.nz` for testing (`npx wrangler login` first time), then `./scripts/deploy-worker.sh production`
+4. `./scripts/deploy-worker.sh dev` — deploys the tile worker to its `*.workers.dev` URL for testing (`npx wrangler login` first time), then `./scripts/deploy-worker.sh production`
 5. `./scripts/upload-style.sh` — uploads `styles/squiggly-outdoor.json` with its source URLs pointed at `R2_PUBLIC_URL`
 
 The worker exposes:

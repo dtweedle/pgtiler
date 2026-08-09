@@ -14,7 +14,7 @@ set -euo pipefail
 #   2. npx wrangler login   — or set CLOUDFLARE_API_TOKEN
 #
 # Usage:
-#   ./scripts/deploy-worker.sh dev            Deploy the dev worker (maps-dev.tweed.nz)
+#   ./scripts/deploy-worker.sh dev            Deploy the dev worker (*.workers.dev)
 #   ./scripts/deploy-worker.sh production     Deploy the production worker
 #   ./scripts/deploy-worker.sh --local        Run locally against a local R2 emulation
 #   ./scripts/deploy-worker.sh --local-remote Run locally against the real R2 bucket
@@ -73,8 +73,11 @@ case "$MODE" in
         banner "Deploying tile worker → dev"
         npx --prefix "$WORKER_DIR" wrangler deploy --cwd "$WORKER_DIR" --env dev
         echo ""
-        echo "  Verify:"
-        echo "    curl -s https://maps-dev.tweed.nz/ | head -20"
+        echo "  Verify (substitute the URL wrangler printed above):"
+        echo "    curl -s https://pgtiler-tiles-dev.<subdomain>.workers.dev/ | head -20"
+        echo ""
+        echo "  Note: the Cache API is a no-op on *.workers.dev, so X-Tile-Cache"
+        echo "  always reports 'miss' here. Test caching with --local instead."
         echo ""
         echo "  Logs:  npx wrangler tail --env dev   (from worker/)"
         echo ""
