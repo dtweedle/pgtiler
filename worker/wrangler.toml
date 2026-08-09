@@ -1,0 +1,41 @@
+name = "pgtiler-tiles"
+main = "src/index.ts"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# The R2 bucket holding the .pmtiles archives (uploaded by scripts/upload-tiles.sh).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "squiggly-maps-v1"
+
+[vars]
+# Archives the worker will serve. Leave empty to serve any .pmtiles in the bucket.
+ALLOWED_ARCHIVES = "squiggly.v1.base,squiggly.v1.contours,squiggly.v1.terrain,squiggly.v1.base-test,squiggly.v1.contours-test,squiggly.v1.terrain-test"
+
+# Tile URLs carry a version shortcode taken from the archive's R2 ETag, so a
+# given URL's bytes can never change. Cache them forever, in browsers as well as
+# at the edge; a re-upload moves tiles to new URLs rather than invalidating old ones.
+CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+# For tiles requested without a version, or at a version the archive has moved
+# past. Those URLs aren't content-addressed, so they only get a short TTL.
+UNVERSIONED_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300"
+
+# How long an isolate reuses a cached archive ETag before re-checking R2.
+# Combined with the TileJSON max-age, this bounds how long after a re-upload
+# clients keep being handed the old version code.
+ARCHIVE_TTL_SECONDS = "60"
+
+CORS_ORIGIN = "*"
+
+[observability]
+enabled = true
+
+# Serve on the custom domain instead of *.workers.dev.
+#
+# NOTE: maps.tweed.nz currently points at the R2 bucket. Remove that R2 custom
+# domain binding first (R2 → bucket → Settings → Custom Domains), then uncomment:
+#
+# [[routes]]
+# pattern = "maps.tweed.nz"
+# custom_domain = true
