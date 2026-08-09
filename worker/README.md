@@ -167,6 +167,20 @@ production data is safe.
 
 Both deploy targets run `typecheck` and `test` first and abort on failure.
 
+### Custom domains attach but never detach
+
+**Wrangler adds a custom domain when config declares one, and leaves it in place
+when config stops declaring it.** Removing `[[env.*.routes]]` from
+`wrangler.toml` and redeploying does *not* detach the hostname — the worker
+stays reachable there, and nothing in the repo explains why.
+
+This already happened once: a deploy made while dev was briefly configured for
+`maps-dev.tweed.nz` left that hostname bound to the dev worker across every
+later deploy. Detaching is a dashboard action — Workers & Pages → the worker →
+Settings → Domains & Routes — there is no wrangler command for it.
+
+Check the deployed triggers, not just the config, when a hostname surprises you.
+
 ### Custom domain
 
 `maps.tweed.nz` currently resolves to the R2 bucket's public domain. To move it
