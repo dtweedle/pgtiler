@@ -175,6 +175,12 @@ Two consequences:
 - **Cache API storage is per-PoP.** A tile warmed in Sydney is a miss in Perth.
   R2 read volume scales with (unique tiles × PoPs receiving traffic), not unique
   tiles.
+- **The Cache API is a no-op on `*.workers.dev`.** `cache.put` silently does
+  nothing and `cache.match` always misses, so every tile reports
+  `X-Tile-Cache: miss` no matter how many times it is requested. This is why the
+  dev environment is deployed to `maps-dev.tweed.nz` rather than a workers.dev
+  subdomain — on workers.dev the layer this document is mostly about does not
+  exist, and a real caching bug would be indistinguishable from the platform.
 
 ### Layer 3 — Worker isolate memory
 
