@@ -85,6 +85,58 @@ Adding a Cloudflare Cache Rule that catches `/*.json` on this route would
 undermine that — the worker's own `Cache-Control` is the only thing that should
 govern its lifetime.
 
+## Layout
+
+```
+src/
+  index.ts              entry point — wires dependencies, nothing else
+  handler.ts            routing and HTTP encoding, takes its deps as arguments
+  router.ts             path parsing (pure)
+  config.ts             wrangler [vars] → typed Config, archive allowlist
+  types.ts              shared types + the interfaces services are injected with
+  services/
+    archive-store.ts    R2 access, ETag memoisation, pmtiles directory cache
+    tile-service.ts     tile + TileJSON logic, returns plain results
+    tile-cache.ts       edge cache behind an interface (Edge/Memory/Null impls)
+  utils/                version, compression, tile-format, http
+  test-support/         fakes: object store, clock, archive loader
+```
+
+Three deliberate seams make this testable without a running worker:
+
+- **Services take an `ObjectStore`, not an `R2Bucket`.** The interface in
+  `types.ts` is the handful of methods actually used; `R2Bucket` satisfies it
+  structurally, and `FakeObjectStore` serves real `.pmtiles` bytes from memory.
+- **`TileService` returns results, not `Response`s.** Which bytes, which version,
+  whether the URL is content-addressed — all assertable without parsing headers.
+  `handler.ts` is the only place that knows about HTTP.
+- **Per-isolate state lives on `ArchiveStore` instances, not module globals.**
+  ETag memoisation and the pmtiles directory cache can't leak between tests, and
+  the clock is injected so expiry is testable without sleeping.
+
+## Testing
+
+```bash
+npm test              # vitest, plain Node — no workerd, no R2 emulation
+npm run test:watch
+npm run typecheck     # worker source and tests, separately
+```
+
+Tests run against the real `tiles/squiggly.v1.*-test.pmtiles` archives, so pmtiles
+parsing, directory traversal and the `EtagMismatch` retry are genuinely
+exercised. Generate them first if missing (`./scripts/generate-osm-tiles.sh
+--test` and friends from the repo root).
+
+`typecheck` runs two configs. `tsconfig.json` covers worker source with Workers
+types only, so anything unavailable in workerd fails there rather than at deploy
+time; `tsconfig.test.json` adds Node types for the tests.
+
+What still needs a real runtime, and is therefore worth a `--remote` pass before
+deploying: **multipart ETags**. Local archives are small enough to upload in one
+part and get a plain MD5; production archives are multipart and get the
+`<hash>-<parts>` form. `versionCode` handles both and is unit-tested on both, but
+only `wrangler dev --remote` proves it end to end against R2.
+
 ## Deploy
 
 ```bash

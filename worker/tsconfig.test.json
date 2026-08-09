@@ -1,0 +1,11 @@
+{
+  // Tests and their helpers run under Node, so they get Node types on top of
+  // the Workers ones. Kept separate from tsconfig.json so the worker source
+  // cannot quietly depend on a Node API.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "node"]
+  },
+  "include": ["src/**/*.ts", "vitest.config.ts"],
+  "exclude": []
+}
