@@ -1,6 +1,6 @@
 # Two deploy targets, deliberately identical in configuration.
 #
-#   dev         → pgtiler-tiles-dev.<subdomain>.workers.dev
+#   dev         → dev.tweed.nz (access-restricted)
 #   production  → maps.tweed.nz (once the custom domain is moved off the bucket)
 #
 # Both read the same R2 bucket and carry the same vars, so dev exercises the real
@@ -27,11 +27,15 @@ enabled = true
 
 [env.dev]
 name = "pgtiler-tiles-dev"
-workers_dev = true
 
-# Edge caching does work here: X-Tile-Cache goes miss → hit on workers.dev,
-# and Cloudflare's own CDN reports CF-Cache-Status: HIT alongside it. Verified
-# against this deployment, contrary to the older platform limitation.
+# dev.tweed.nz is the development subdomain. workers_dev is off so the worker is
+# reachable on exactly one hostname — whatever protects dev.tweed.nz would be
+# trivially bypassed by a *.workers.dev URL pointing at the same worker.
+workers_dev = false
+
+[[env.dev.routes]]
+pattern = "dev.tweed.nz"
+custom_domain = true
 
 [[env.dev.r2_buckets]]
 binding = "BUCKET"

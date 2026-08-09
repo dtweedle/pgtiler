@@ -391,6 +391,17 @@ curl -sD- -o/dev/null https://maps.tweed.nz/squiggly.v1.base/<version>/8/234/151
 
 ## Open questions
 
+- **`dev.tweed.nz` is unprotected.** It serves the same archives as production
+  from a guessable hostname on a real domain. Exposure is Workers request quota
+  and R2 reads rather than data leakage — the tiles are public map data — but it
+  should not stay open indefinitely. Options considered, none implemented:
+  a Cloudflare WAF custom rule allowlisting a source IP (no client changes, but
+  breaks when the IP moves); Cloudflare Access (real identity, but a
+  cross-origin MapLibre fetch needs `transformRequest` with
+  `credentials: 'include'` and `CORS_ORIGIN` pinned away from `*`); or a shared
+  token propagated through the TileJSON tiles template (works anywhere, but puts
+  the secret in URLs and logs).
+
 - **TileJSON's `stale-while-revalidate=3600`** means a returning visitor whose
   cached copy is 5–65 minutes old gets the stale version code on page load, and
   runs that whole session on the short-TTL path. Not broken, but it makes

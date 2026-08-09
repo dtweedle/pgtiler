@@ -14,7 +14,7 @@ set -euo pipefail
 #   2. npx wrangler login   — or set CLOUDFLARE_API_TOKEN
 #
 # Usage:
-#   ./scripts/deploy-worker.sh dev            Deploy the dev worker (*.workers.dev)
+#   ./scripts/deploy-worker.sh dev            Deploy the dev worker (dev.tweed.nz)
 #   ./scripts/deploy-worker.sh production     Deploy the production worker
 #   ./scripts/deploy-worker.sh --local        Run locally against a local R2 emulation
 #   ./scripts/deploy-worker.sh --local-remote Run locally against the real R2 bucket
@@ -74,7 +74,7 @@ case "$MODE" in
         npx --prefix "$WORKER_DIR" wrangler deploy --cwd "$WORKER_DIR" --env dev
         echo ""
         echo "  Verify (wrangler printed the URL above):"
-        echo "    curl -s https://pgtiler-tiles-dev.pgtiler.workers.dev/ | head -20"
+        echo "    curl -s https://dev.tweed.nz/ | head -20"
         echo ""
         echo "  Edge caching works here — X-Tile-Cache goes miss then hit."
         echo ""

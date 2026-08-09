@@ -263,7 +263,7 @@ If `R2_PUBLIC_URL` is configured in `.env`, additional remote options appear in 
 To point the preview at a deployed worker without editing `.env` — testing the dev deployment, for instance — export the URL for that run:
 
 ```bash
-R2_PUBLIC_URL=https://pgtiler-tiles-dev.<subdomain>.workers.dev ./scripts/preview.sh
+R2_PUBLIC_URL=https://dev.tweed.nz ./scripts/preview.sh
 ```
 
 An exported value takes precedence over `.env`.
@@ -280,7 +280,7 @@ Production tiles live in an R2 bucket and are served by a Cloudflare Worker
 1. Install [rclone](https://rclone.org/) and configure an R2 remote (see `scripts/upload-tiles.sh` header for setup steps)
 2. Copy `.env.example` to `.env` and fill in `R2_BUCKET` and `R2_PUBLIC_URL`
 3. `./scripts/upload-tiles.sh` — uploads all non-test `.pmtiles` files from `tiles/`
-4. `./scripts/deploy-worker.sh dev` — deploys the tile worker to its `*.workers.dev` URL for testing (`npx wrangler login` first time), then `./scripts/deploy-worker.sh production`
+4. `./scripts/deploy-worker.sh dev` — deploys the tile worker to `dev.tweed.nz` for testing (`npx wrangler login` first time), then `./scripts/deploy-worker.sh production`
 5. `./scripts/upload-style.sh` — uploads `styles/squiggly-outdoor.json` with its source URLs pointed at `R2_PUBLIC_URL`
 
 The worker exposes:

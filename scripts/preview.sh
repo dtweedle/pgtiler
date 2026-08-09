@@ -9,7 +9,7 @@ set -euo pipefail
 #   3. unset — local Martin layers only
 #
 # Point the preview at a deployed worker without editing .env:
-#   R2_PUBLIC_URL=https://pgtiler-tiles-dev.<subdomain>.workers.dev ./scripts/preview.sh
+#   R2_PUBLIC_URL=https://dev.tweed.nz ./scripts/preview.sh
 #
 # Usage: ./scripts/preview.sh [PORT]   (default 8080)
 

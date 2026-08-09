@@ -215,7 +215,7 @@ The preview page reads its tile host from `R2_PUBLIC_URL`, so a locally served
 MapLibre can point at any deployed worker:
 
 ```bash
-R2_PUBLIC_URL=https://pgtiler-tiles-dev.<subdomain>.workers.dev ./scripts/preview.sh
+R2_PUBLIC_URL=https://dev.tweed.nz ./scripts/preview.sh
 ```
 
 This is the highest-fidelity test short of production — a real browser, real

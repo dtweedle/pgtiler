@@ -140,7 +140,7 @@ only `wrangler dev --remote` proves it end to end against R2.
 
 ```bash
 # from the repo root
-./scripts/deploy-worker.sh dev             # deploy to *.workers.dev
+./scripts/deploy-worker.sh dev             # deploy to dev.tweed.nz
 ./scripts/deploy-worker.sh production      # deploy to maps.tweed.nz
 ./scripts/deploy-worker.sh --local         # run on :8787, local R2 emulation
 ./scripts/deploy-worker.sh --local-remote  # run on :8787, real R2 bucket
@@ -151,16 +151,19 @@ First time: `cd worker && npx wrangler login`.
 `dev` and `production` are configured identically in `wrangler.toml` and read
 the same bucket, so dev exercises the real archives and their multipart ETags.
 
-Edge caching **does** work on `*.workers.dev` — verified against this
-deployment, `X-Tile-Cache` goes `miss` then `hit` and Cloudflare reports
-`CF-Cache-Status: HIT` alongside it. The only thing dev does not reproduce is
-the production hostname.
+Dev is on `dev.tweed.nz`, the development subdomain, with `workers_dev` off
+so the worker answers on exactly one hostname. Edge caching works there —
+`X-Tile-Cache` goes `miss` then `hit`, with `CF-Cache-Status: HIT` alongside.
+The only thing dev does not reproduce is the production hostname itself.
 
 | | Multipart ETags | Edge caching |
 |---|:---:|:---:|
 | `--local` | ✗ (single-part MD5) | ✓ |
-| `dev` (workers.dev) | ✓ | ✓ |
-| `production` | ✓ | ✓ | That is the
+| `dev` (dev.tweed.nz) | ✓ | ✓ |
+| `production` | ✓ | ✓ |
+
+**dev.tweed.nz is currently unprotected** — see Open questions in
+`architecture/CACHING.md`. That is the
 point: dev exercises the real archives, including their multipart ETags, which
 no local emulation reproduces. The worker only reads, so pointing dev at
 production data is safe.
