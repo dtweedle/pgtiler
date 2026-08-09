@@ -258,21 +258,42 @@ map.setTerrain({ source: 'terrain-3d', exaggeration: 1.5 });
 - **Hillshade** — hillshade rendering from terrain DEM (local full, local test, ESRI)
 - **Terrain** — 3D terrain extrusion (local full, local test)
 
-If `R2_PUBLIC_URL` is configured in `.env`, additional R2-hosted options appear in each group via PMTiles protocol. The preview server (`scripts/preview.sh`) generates `preview/config.js` from `.env` on startup.
+If `R2_PUBLIC_URL` is configured in `.env`, additional remote options appear in each group, loaded from the tile worker as plain TileJSON + XYZ tiles. The preview server (`scripts/preview.sh`) generates `preview/config.js` from `.env` on startup.
 
 ## Styling
 
 The Squiggly Outdoor style is embedded in `preview/index.html` as a MapTiler Outdoor-inspired style for OpenMapTiles vector tiles. A standalone copy is also available at `preview/outdoor-style.json` for editing in [Maputnik](https://maputnik.github.io/). Font glyphs are served from `fonts.openmaptiles.org` (Open Sans Regular, Bold, and Italic).
 
-## Uploading tiles to Cloudflare R2
+## Serving tiles in production (Cloudflare R2 + Worker)
 
-Production tiles can be uploaded to Cloudflare R2 for remote serving:
+Production tiles live in an R2 bucket and are served by a Cloudflare Worker
+(`worker/`) that reads the PMTiles archives and returns one response per tile.
 
 1. Install [rclone](https://rclone.org/) and configure an R2 remote (see `scripts/upload-tiles.sh` header for setup steps)
-2. Copy `.env.example` to `.env` and fill in `R2_BUCKET` and optionally `R2_PUBLIC_URL`
-3. Run `./scripts/upload-tiles.sh` — this uploads all non-test `.pmtiles` files from `tiles/`
+2. Copy `.env.example` to `.env` and fill in `R2_BUCKET` and `R2_PUBLIC_URL`
+3. `./scripts/upload-tiles.sh` — uploads all non-test `.pmtiles` files from `tiles/`
+4. `./scripts/deploy-worker.sh` — deploys the tile worker (`npx wrangler login` first time)
+5. `./scripts/upload-style.sh` — uploads `styles/squiggly-outdoor.json` with its source URLs pointed at `R2_PUBLIC_URL`
 
-Setting `R2_PUBLIC_URL` in `.env` enables R2-hosted tile options in the preview page.
+The worker exposes:
+
+| URL | What |
+|-----|------|
+| `{R2_PUBLIC_URL}/` | Index of servable archives |
+| `{R2_PUBLIC_URL}/squiggly.v1.base.json` | TileJSON |
+| `{R2_PUBLIC_URL}/squiggly.v1.base/{z}/{x}/{y}.mvt` | Vector tiles |
+| `{R2_PUBLIC_URL}/squiggly.v1.terrain/{z}/{x}/{y}.png` | RGB terrain tiles |
+
+**Why not serve the `.pmtiles` files directly?** Because the browser then fetches
+them with HTTP Range requests, and Cloudflare's edge cache keys on the URL rather
+than the byte range — so responses come back cached against the wrong range, and
+re-uploading an archive leaves stale bytes cached under the same URL. Serving one
+tile per URL gives each tile its own cache entry and ETag. The worker folds the
+archive's R2 ETag into the cache key, so a re-upload invalidates everything derived
+from the previous version. See `worker/README.md` for details and config.
+
+The R2 bucket does **not** need public access — the worker reads it through a
+binding.
 
 ## Adding a new region
 

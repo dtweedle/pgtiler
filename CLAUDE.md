@@ -45,6 +45,11 @@ docker compose restart martin
 # Serve the preview page (open at http://localhost:8080)
 ./scripts/preview.sh
 
+# Production: upload archives to R2, then deploy the tile worker
+./scripts/upload-tiles.sh
+./scripts/deploy-worker.sh          # add --dev to run it locally on :8787
+./scripts/upload-style.sh
+
 # Test mode — all generation scripts accept --test for fast iteration
 ./scripts/build-vrts.sh --test
 ./scripts/generate-contours.sh --test
@@ -69,6 +74,10 @@ Martin auto-serves any `.pmtiles` or `.mbtiles` file in `tiles/`. The filename (
 - OSM: `Geofabrik .osm.pbf → Planetiler → .pmtiles`
 - Contours: `Copernicus DEM .tif → gdalwarp (smooth) → gdal_contour (parallel) → GeoJSON → tippecanoe → .mbtiles → pmtiles → .pmtiles`
 - Terrain: `Copernicus DEM .tif → australia-terrain.vrt → gdalwarp (merge) → rio-rgbify (terrarium) → .mbtiles → pmtiles → .pmtiles`
+
+**Production serving (`worker/`):** a Cloudflare Worker reads the PMTiles archives out of R2 and serves `/{archive}.json` (TileJSON) and `/{archive}/{version}/{z}/{x}/{y}.{ext}` (one response per tile). Do **not** point clients at the raw `.pmtiles` objects over `pmtiles://` — the archives are 1.2–4.8 GB, well over Cloudflare's 512 MB cacheable-object limit, so every Range request misses to R2 and an oversized-object miss can be filled by fetching the whole file.
+
+`{version}` is the first 10 chars of the archive's R2 ETag, which is already a content hash — nothing to track at upload time. It makes tile URLs content-addressed, so they cache `immutable` in the browser as well as at the edge, and a re-upload moves tiles to new URLs instead of needing a purge. TileJSON has a 5-minute TTL and is the only thing clients refetch, so redeploys propagate in minutes. `styles/*.json` reference the worker, not the bucket. See `worker/README.md`.
 
 **Preview page:** `preview/index.html` uses MapLibre GL JS with OpenFreeMap as the base map and adds Martin layers on top. Run a local HTTP server to avoid CORS issues.
 
