@@ -57,6 +57,22 @@ docker compose restart martin
 ./scripts/generate-osm-tiles.sh --test
 ```
 
+## Recording architectural decisions
+
+Key architectural decisions live in `architecture/`, one Markdown file per topic
+(`architecture/Caching.md`, etc.).
+
+**When a decision is made that shapes how the system works — a serving strategy,
+a storage layout, a cache design, a format choice — write it up there.** Not just
+the conclusion: the problem that forced it, the options rejected and why, the
+terminology someone would need to follow it, and explicitly which parts are
+verified versus assumed. These documents are for a reader who wasn't in the
+conversation.
+
+Update the relevant file when a decision changes rather than appending a new one.
+Code comments explain the line in front of you; `architecture/` explains why the
+shape of the system is what it is.
+
 ## Architecture
 
 Martin auto-serves any `.pmtiles` or `.mbtiles` file in `tiles/`. The filename (without extension) becomes the source ID — no config changes needed.
