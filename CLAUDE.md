@@ -60,7 +60,7 @@ docker compose restart martin
 ## Recording architectural decisions
 
 Key architectural decisions live in `architecture/`, one Markdown file per topic
-(`architecture/CACHING.md`, etc.).
+(`architecture/CACHING.md`, `architecture/SERVING.md`, etc.).
 
 **When a decision is made that shapes how the system works — a serving strategy,
 a storage layout, a cache design, a format choice — write it up there.** Not just

@@ -14,7 +14,7 @@ Shell scripts for downloading data, generating tiles, and running local services
 | `generate-contours.sh` | Upsamples DEM 3× with cubic spline, generates 20m contour lines (parallel), builds vector tiles with tippecanoe → `squiggly.v1.contours.pmtiles` |
 | `generate-terrain-tiles.sh` | Merges terrain VRT to clean GeoTIFF, encodes as RGB terrain tiles (terrarium encoding) with rio-rgbify → `squiggly.v1.terrain.pmtiles` |
 | `test-config.sh` | Shared configuration for `--test` mode (single Bright, VIC tile) |
-| `preview.sh` | Starts a local HTTP server for the preview page |
+| `preview.sh` | Starts a local HTTP server for the preview page. `R2_PUBLIC_URL=<url> ./scripts/preview.sh` points it at a deployed worker |
 | `upload-tiles.sh` | Uploads production `.pmtiles` archives to the R2 bucket via rclone |
 | `deploy-worker.sh` | Deploys the Cloudflare Worker in `worker/` that serves tiles from those archives. Takes `dev` \| `production` \| `--local` \| `--local-remote` |
 | `upload-style.sh` | Uploads `styles/squiggly-outdoor.json` to R2 with its source URLs rewritten to `R2_PUBLIC_URL` |

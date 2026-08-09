@@ -260,6 +260,14 @@ map.setTerrain({ source: 'terrain-3d', exaggeration: 1.5 });
 
 If `R2_PUBLIC_URL` is configured in `.env`, additional remote options appear in each group, loaded from the tile worker as plain TileJSON + XYZ tiles. The preview server (`scripts/preview.sh`) generates `preview/config.js` from `.env` on startup.
 
+To point the preview at a deployed worker without editing `.env` — testing the dev deployment, for instance — export the URL for that run:
+
+```bash
+R2_PUBLIC_URL=https://pgtiler-tiles-dev.<subdomain>.workers.dev ./scripts/preview.sh
+```
+
+An exported value takes precedence over `.env`.
+
 ## Styling
 
 The Squiggly Outdoor style is embedded in `preview/index.html` as a MapTiler Outdoor-inspired style for OpenMapTiles vector tiles. A standalone copy is also available at `preview/outdoor-style.json` for editing in [Maputnik](https://maputnik.github.io/). Font glyphs are served from `fonts.openmaptiles.org` (Open Sans Regular, Bold, and Italic).

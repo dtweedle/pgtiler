@@ -1,14 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Serves the MapLibre preview page.
+#
+# Tile host resolution, in order of precedence:
+#   1. R2_PUBLIC_URL exported in the environment  ← use this to target dev
+#   2. R2_PUBLIC_URL in .env                      ← the usual production value
+#   3. unset — local Martin layers only
+#
+# Point the preview at a deployed worker without editing .env:
+#   R2_PUBLIC_URL=https://pgtiler-tiles-dev.<subdomain>.workers.dev ./scripts/preview.sh
+#
+# Usage: ./scripts/preview.sh [PORT]   (default 8080)
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${1:-8080}"
+
+# Capture any exported value before .env clobbers it.
+R2_PUBLIC_URL_OVERRIDE="${R2_PUBLIC_URL:-}"
 
 # Load .env if present
 if [[ -f "$ROOT/.env" ]]; then
     # shellcheck disable=SC1091
     source "$ROOT/.env"
 fi
+
+# An explicit export wins over .env — targeting dev shouldn't mean editing a
+# file you'll forget to change back.
+if [[ -n "$R2_PUBLIC_URL_OVERRIDE" ]]; then
+    R2_PUBLIC_URL="$R2_PUBLIC_URL_OVERRIDE"
+fi
+
+# Trailing slashes would produce '//squiggly.v1.base.json' in source URLs.
+R2_PUBLIC_URL="${R2_PUBLIC_URL:-}"
+R2_PUBLIC_URL="${R2_PUBLIC_URL%/}"
 
 # Generate config.js for the preview page
 CONFIG="$ROOT/preview/config.js"
