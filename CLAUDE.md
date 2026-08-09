@@ -47,7 +47,7 @@ docker compose restart martin
 
 # Production: upload archives to R2, then deploy the tile worker
 ./scripts/upload-tiles.sh
-./scripts/deploy-worker.sh          # add --dev to run it locally on :8787
+./scripts/deploy-worker.sh dev      # then: production. --local / --local-remote run it on :8787
 ./scripts/upload-style.sh
 
 # Test mode — all generation scripts accept --test for fast iteration
@@ -72,6 +72,22 @@ conversation.
 Update the relevant file when a decision changes rather than appending a new one.
 Code comments explain the line in front of you; `architecture/` explains why the
 shape of the system is what it is.
+
+## Keeping the docs current
+
+**Before finishing any change, check whether `README.md` or `architecture/` needs
+updating, and say which — including when the answer is neither.** Documentation
+drift is the default outcome otherwise; this check is part of the work, not a
+follow-up.
+
+- `README.md` — anything a user runs or sees: commands, scripts, the directory
+  tree, setup steps, URLs, the deployment sequence.
+- `architecture/` — anything that changes *why* the system is shaped as it is:
+  a new decision, a rejected option, a revised assumption, a corrected fact.
+- Also check the doc nearest the code you touched (`worker/README.md`,
+  `scripts/SCRIPTS.md`) and any line references you may have invalidated.
+
+Update the docs in the same commit as the change they describe.
 
 ## Architecture
 

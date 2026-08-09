@@ -1,6 +1,6 @@
-# Tile files — can be large (100MB–20GB), reproduce via scripts/generate-osm-tiles.sh
-tiles/*
-!tiles/TILES.md
+# Tile archives — large (100MB–20GB), regenerate via scripts/generate-*-tiles.sh
+# Ignored wholesale: nothing in here belongs in git.
+tiles/
 
 # Raw datasets and Planetiler temp files — large, reproduce via scripts
 datasets/sources/

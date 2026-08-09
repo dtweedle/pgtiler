@@ -1,14 +1,56 @@
+# Two deploy targets, deliberately identical in configuration.
+#
+#   dev         → pgtiler-tiles-dev.<subdomain>.workers.dev
+#   production  → maps.tweed.nz (once the custom domain is moved off the bucket)
+#
+# Both read the same R2 bucket and carry the same vars, so dev exercises the real
+# archives — including their multipart ETags, which a local emulation cannot
+# reproduce. The worker only ever reads, so pointing dev at production data is safe.
+#
+# Deploy with ./scripts/deploy-worker.sh dev | production — never a bare
+# `wrangler deploy`, which would target production.
+
 name = "pgtiler-tiles"
 main = "src/index.ts"
 compatibility_date = "2025-11-01"
 compatibility_flags = ["nodejs_compat"]
 
-# The R2 bucket holding the .pmtiles archives (uploaded by scripts/upload-tiles.sh).
-[[r2_buckets]]
+[observability]
+enabled = true
+
+# ── Shared values ────────────────────────────────────────────────────────
+# Repeated verbatim in each environment below: wrangler does NOT inherit
+# `vars` or bindings into named environments, so anything defined only at the
+# top level would silently vanish from `--env dev`.
+
+# ── dev ──────────────────────────────────────────────────────────────────
+
+[env.dev]
+name = "pgtiler-tiles-dev"
+workers_dev = true
+
+[[env.dev.r2_buckets]]
 binding = "BUCKET"
 bucket_name = "squiggly-maps-v1"
 
-[vars]
+[env.dev.vars]
+ALLOWED_ARCHIVES = "squiggly.v1.base,squiggly.v1.contours,squiggly.v1.terrain,squiggly.v1.base-test,squiggly.v1.contours-test,squiggly.v1.terrain-test"
+CACHE_CONTROL = "public, max-age=31536000, immutable"
+UNVERSIONED_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300"
+ARCHIVE_TTL_SECONDS = "60"
+CORS_ORIGIN = "*"
+
+# ── production ───────────────────────────────────────────────────────────
+
+[env.production]
+name = "pgtiler-tiles"
+workers_dev = false
+
+[[env.production.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "squiggly-maps-v1"
+
+[env.production.vars]
 # Archives the worker will serve. Leave empty to serve any .pmtiles in the bucket.
 ALLOWED_ARCHIVES = "squiggly.v1.base,squiggly.v1.contours,squiggly.v1.terrain,squiggly.v1.base-test,squiggly.v1.contours-test,squiggly.v1.terrain-test"
 
@@ -28,14 +70,11 @@ ARCHIVE_TTL_SECONDS = "60"
 
 CORS_ORIGIN = "*"
 
-[observability]
-enabled = true
-
 # Serve on the custom domain instead of *.workers.dev.
 #
 # NOTE: maps.tweed.nz currently points at the R2 bucket. Remove that R2 custom
 # domain binding first (R2 → bucket → Settings → Custom Domains), then uncomment:
 #
-# [[routes]]
+# [[env.production.routes]]
 # pattern = "maps.tweed.nz"
 # custom_domain = true

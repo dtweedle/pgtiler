@@ -141,17 +141,21 @@ only `wrangler dev --remote` proves it end to end against R2.
 
 ```bash
 # from the repo root
-./scripts/deploy-worker.sh          # deploy
-./scripts/deploy-worker.sh --dev    # local dev on :8787
+./scripts/deploy-worker.sh dev             # deploy to *.workers.dev
+./scripts/deploy-worker.sh production      # deploy to maps.tweed.nz
+./scripts/deploy-worker.sh --local         # run on :8787, local R2 emulation
+./scripts/deploy-worker.sh --local-remote  # run on :8787, real R2 bucket
 ```
 
-First time:
+First time: `cd worker && npx wrangler login`.
 
-```bash
-cd worker
-npx wrangler login
-npx wrangler deploy
-```
+`dev` and `production` are configured identically in `wrangler.toml` and read
+the same bucket — dev differs only in worker name and hostname. That is the
+point: dev exercises the real archives, including their multipart ETags, which
+no local emulation reproduces. The worker only reads, so pointing dev at
+production data is safe.
+
+Both deploy targets run `typecheck` and `test` first and abort on failure.
 
 ### Custom domain
 
@@ -161,26 +165,34 @@ to the worker:
 1. Cloudflare dashboard → R2 → `squiggly-maps-v1` → Settings → **remove** the
    `maps.tweed.nz` custom domain (and disable public access — the worker reads
    through its R2 binding, the bucket does not need to be public).
-2. Uncomment the `[[routes]]` block in `wrangler.toml`.
-3. `./scripts/deploy-worker.sh`
+2. Uncomment the `[[env.production.routes]]` block in `wrangler.toml`.
+3. `./scripts/deploy-worker.sh production`
 
 Until then the worker is reachable at its `*.workers.dev` URL.
 
 ## Local dev
 
-`wrangler dev` uses a local R2 emulation, not the real bucket. Seed it:
+`--local` uses a local R2 emulation, not the real bucket, so seed it first:
 
 ```bash
 cd worker
 npx wrangler r2 object put squiggly-maps-v1/squiggly.v1.base-test.pmtiles \
   --file ../tiles/squiggly.v1.base-test.pmtiles --local
-npx wrangler dev
 ```
 
-Then `curl http://localhost:8787/` to see what's available. Use
-`npx wrangler dev --remote` to run against the real bucket instead.
+Then `./scripts/deploy-worker.sh --local` and `curl http://localhost:8787/` to
+see what's available.
 
-## Config (`wrangler.toml` `[vars]`)
+`--local-remote` skips the seeding and reads the real bucket instead — slower,
+but the only local mode that exercises production archives and their multipart
+ETags.
+
+## Config (`wrangler.toml`)
+
+Vars are defined **per environment** (`[env.dev.vars]`, `[env.production.vars]`)
+and are currently identical between the two. Wrangler does not inherit `vars` or
+bindings from the top level into named environments, so anything added must be
+added to both.
 
 | Var | Default | What |
 |-----|---------|------|

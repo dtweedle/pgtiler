@@ -16,7 +16,7 @@ Shell scripts for downloading data, generating tiles, and running local services
 | `test-config.sh` | Shared configuration for `--test` mode (single Bright, VIC tile) |
 | `preview.sh` | Starts a local HTTP server for the preview page |
 | `upload-tiles.sh` | Uploads production `.pmtiles` archives to the R2 bucket via rclone |
-| `deploy-worker.sh` | Deploys the Cloudflare Worker in `worker/` that serves tiles from those archives (`--dev` runs it locally on :8787) |
+| `deploy-worker.sh` | Deploys the Cloudflare Worker in `worker/` that serves tiles from those archives. Takes `dev` \| `production` \| `--local` \| `--local-remote` |
 | `upload-style.sh` | Uploads `styles/squiggly-outdoor.json` to R2 with its source URLs rewritten to `R2_PUBLIC_URL` |
 
 ## Running order
