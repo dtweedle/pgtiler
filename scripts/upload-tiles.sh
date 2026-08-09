@@ -103,9 +103,13 @@ echo "════════════════════════�
 echo "  Done"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
-echo "  Files available at:"
-echo "    https://<your-custom-domain>/${files[0]##*/}"
+echo "  Served by the tile worker (./scripts/deploy-worker.sh) as:"
+for f in "${files[@]}"; do
+    name="$(basename "$f" .pmtiles)"
+    echo "    ${R2_PUBLIC_URL:-https://<worker-domain>}/${name}.json"
+done
 echo ""
-echo "  Or via R2 public URL (if public access enabled):"
-echo "    https://<account-id>.r2.dev/${R2_BUCKET}/<filename>"
+echo "  Tile URLs carry a version taken from the archive's ETag, so this upload"
+echo "  moves tiles to new URLs — no purge needed. Clients pick them up on their"
+echo "  next TileJSON fetch (5 min TTL). See architecture/Caching.md."
 echo ""
