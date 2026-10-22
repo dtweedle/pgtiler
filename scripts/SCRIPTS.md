@@ -8,8 +8,8 @@ Shell scripts for downloading data, generating tiles, and running local services
 |--------|-------------|
 | `init.sh` | Creates directories and downloads all required datasets |
 | `download-osm-base-vectors.sh` | Downloads the Australia OSM extract from Geofabrik |
-| `download-copernicus-dem.sh` | Downloads ~1450 Copernicus GLO-30 DEM tiles from AWS S3, then runs `build-vrts.sh` |
-| `build-vrts.sh` | Builds VRT index files from DEM tiles: `australia-dem.vrt` (all tiles, for contours) and `australia-terrain.vrt` (Manilla/Snowy subset, for terrain) |
+| `download-copernicus-dem.sh` | Downloads the 868 Copernicus GLO-30 DEM tiles covering Australia from AWS S3, then runs `build-vrts.sh` |
+| `build-vrts.sh` | Builds VRT index files from DEM tiles: `australia-dem.vrt` (all tiles, for contours) and `australia-terrain.vrt` (all of Australia, for terrain — currently the same 868 tiles) |
 | `generate-osm-tiles.sh` | Runs Planetiler to convert OSM data into OpenMapTiles vector tiles → `squiggly.v1.base.pmtiles` |
 | `generate-contours.sh` | Upsamples DEM 3× with cubic spline, generates 20m contour lines (parallel), builds vector tiles with tippecanoe → `squiggly.v1.contours.pmtiles` |
 | `generate-terrain-tiles.sh` | Merges terrain VRT to clean GeoTIFF, encodes as RGB terrain tiles (terrarium encoding) with rio-rgbify → `squiggly.v1.terrain.pmtiles` |

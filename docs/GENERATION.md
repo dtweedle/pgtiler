@@ -87,6 +87,14 @@ is vestigial: it costs nothing but implies a distinction that no longer exists.
 Worth either collapsing to one VRT or re-narrowing terrain, rather than leaving a
 reader to infer a difference that isn't there.
 
+> [!warning] The config was expanded; the archive wasn't
+> The terrain archive in `tiles/` predates the change. Its intermediate MBTiles
+> covers only about 146–154°E, 27–37°S — 16,805 tiles, the Eastern Seaboard
+> benchmark run — while `datasets/tmp/australia-dem-clean.tif` (27 March) is a
+> full-Australia merge that was never encoded. Checked 2026-10-22 against
+> `datasets/tmp/australia-terrain.mbtiles` and the archive header; the R2 copy
+> was not checked but is presumably the same file.
+
 ---
 
 ## Pipeline 1 — OSM base map
@@ -266,11 +274,13 @@ hence its R2 ETag, hence every tile URL it serves; see [[CACHING#Versioning and 
 
 Collected from the walkthrough above, in rough order of how much they matter:
 
-1. **Terrain has no attribution and wrong bounds** — a licence-compliance issue,
+1. **Terrain covers only the Eastern Seaboard** — the full-Australia build was
+   configured but never run. See [[#The two VRTs are now the same file in all but name]].
+2. **Terrain has no attribution and wrong bounds** — a licence-compliance issue,
    not just untidy metadata. Needs fixing at the pmtiles-convert step.
-2. **The two VRTs are identical** — a distinction that no longer exists. Collapse
+3. **The two VRTs are identical** — a distinction that no longer exists. Collapse
    to one, or re-narrow terrain.
-3. **No incremental regeneration** — a one-tile DEM update rebuilds everything.
+4. **No incremental regeneration** — a one-tile DEM update rebuilds everything.
 
 Two others found in this pass have been fixed: the contour script advertised an
 `is_major` attribute it never generated, and `init.sh` pointed at a
