@@ -72,10 +72,11 @@ automatically cached by Cloudflare — see [[#^assumption-3|Assumption 3]].
 
 **The Cache API** (`caches.default`) is edge storage the Worker writes to
 explicitly. `handleTile` calls `cache.match()` on the way in and `cache.put()` on
-the way out (`worker/src/index.ts:324`, `:378`). Entries respect the
+the way out (`worker/src/handler.ts:96`, `:118`, via `EdgeResponseCache` in
+`worker/src/services/tile-cache.ts`). Entries respect the
 `Cache-Control` on the stored response, so the table above governs the edge too.
 
-Two consequences:
+Three consequences:
 
 - **TileJSON is never written here.** `handleTileJson` doesn't call `cache.put`.
   That's deliberate — TileJSON is the mechanism by which a redeploy reaches
@@ -95,15 +96,15 @@ Two module-level caches, both per-isolate and both ephemeral:
 
 | Structure | Holds | Lifetime |
 |---|---|---|
-| `pmtilesCache` (`ResolvedValueCache`, 200 entries) | Archive header + directory pages | LRU eviction |
-| `archiveEtags` | Current ETag per archive | `ARCHIVE_TTL_SECONDS` (60s) |
+| `ArchiveStore.pmtilesCache` (`ResolvedValueCache`, 200 entries) | Archive header + directory pages | LRU eviction |
+| `ArchiveStore.etags` | Current ETag per archive | `ARCHIVE_TTL_SECONDS` (60s) |
 
 `pmtilesCache` is what makes this efficient. A PMTiles lookup needs the header,
 then a root directory, then possibly a leaf directory, then the tile itself —
 three or four reads cold. Once the directories are memoised, a tile costs a
 single R2 read.
 
-`archiveEtags` avoids a HEAD request against R2 on every single tile. It's also
+`ArchiveStore.etags` avoids a HEAD request against R2 on every single tile. It's also
 the source of the subtlety in the next section.
 
 ### Layer 4 — R2
@@ -183,7 +184,7 @@ slightly fresher data on one side.
 
 ### The stale-isolate hazard
 
-`archiveEtags` memoises for 60 seconds, so for up to a minute after a re-upload
+`ArchiveStore.etags` memoises for 60 seconds, so for up to a minute after a re-upload
 an isolate still believes the old ETag is current. Meanwhile every read is
 guarded by `onlyIf: { etagMatches }`; when the object has changed the guard
 fails, pmtiles catches the resulting `EtagMismatch`, invalidates its directory
@@ -196,7 +197,8 @@ cache, and transparently re-reads the **new** archive.
 
 So cache lifetime is decided from `R2Source.lastEtag` — the ETag of the read that
 actually produced the bytes — never from the memoised value
-(`worker/src/index.ts:83`, `:351`). If nothing was read from R2 at all (warm
+(`worker/src/services/archive-store.ts:37`, read by `TileService.resolveVersion`
+at `worker/src/services/tile-service.ts:137`). If nothing was read from R2 at all (warm
 directories, absent tile), it can't be confirmed and gets the short TTL.
 
 ---
