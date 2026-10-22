@@ -11,7 +11,7 @@ Shell scripts for downloading data, generating tiles, and running local services
 | `download-copernicus-dem.sh` | Downloads the 868 Copernicus GLO-30 DEM tiles covering Australia from AWS S3, then runs `build-vrts.sh` |
 | `build-vrts.sh` | Builds VRT index files from DEM tiles: `australia-dem.vrt` (all tiles, for contours) and `australia-terrain.vrt` (all of Australia, for terrain — currently the same 868 tiles) |
 | `generate-osm-tiles.sh` | Runs Planetiler to convert OSM data into OpenMapTiles vector tiles → `squiggly.v1.base.pmtiles` |
-| `generate-contours.sh` | Upsamples DEM 3× with cubic spline, generates 20m contour lines (parallel), builds vector tiles with tippecanoe → `squiggly.v1.contours.pmtiles` |
+| `generate-contours.sh` | Smooths each DEM tile with a cubic-spline resample, generates 20m contour lines (parallel), builds vector tiles with tippecanoe → `squiggly.v1.contours.pmtiles` |
 | `generate-terrain-tiles.sh` | Merges terrain VRT to clean GeoTIFF, encodes as RGB terrain tiles (terrarium encoding) with rio-rgbify, sets name/attribution/bounds → `squiggly.v1.terrain.pmtiles`. `RGBIFY_WORKERS=N` sets the worker count (default: Docker's CPUs) |
 | `check-terrain.py` | Checks a terrain MBTiles before conversion/upload: metadata, coverage per zoom, decoded spot heights, 256 m-boundary spike scan. Standard-library Python |
 | `test-config.sh` | Shared configuration for `--test` mode (single Bright, VIC tile) |

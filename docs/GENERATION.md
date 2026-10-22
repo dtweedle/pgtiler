@@ -141,6 +141,18 @@ This is interpolation, not new information — it buys visual quality, not
 accuracy. Resampling elevation is safe here in a way it explicitly is not for
 terrain (see [[#Why rio-rgbify, despite being the slowest correct option|Pipeline 3]]).
 
+> [!warning] It isn't actually a 3× upsample
+> The source tiles are already 1 arc-second: 3600 × 3600 pixels at
+> 0.000277778° (checked 2026-10-22 against the GeoTIFF headers of S37/E146,
+> S12/E132 and S43/E146). So `-tr 0.000277778` resamples at the *native*
+> resolution, not 3× finer. `SMOOTH_FACTOR=3` in the script is never used.
+>
+> It isn't a no-op either: GDAL's `cubicspline` is an approximating B-spline, so
+> it still smooths the surface. The contours are smoothed, just not upsampled. A
+> true 3× would be `-tr 0.0000925926 0.0000925926` — about 9× the pixels per
+> tile, with the disk space and gdal_contour time to match. Test it on the
+> `--test` tile before trying it at scale.
+
 ### Why per-tile, and why 8 at a time
 
 Each of the 868 tiles is upsampled and traced independently, 8 containers at a
@@ -300,6 +312,9 @@ Collected from the walkthrough above, in rough order of how much they matter:
 3. **The two VRTs are identical** — a distinction that no longer exists. Collapse
    to one, or re-narrow terrain.
 4. **No incremental regeneration** — a one-tile DEM update rebuilds everything.
+5. **The contour "3× upsample" is really a same-resolution smoothing pass** — see
+   [[#Why upsample before tracing]]. Fine as a smoother; the docs and the unused
+   `SMOOTH_FACTOR` overstate it.
 
 Two others found in this pass have been fixed: the contour script advertised an
 `is_major` attribute it never generated, and `init.sh` pointed at a
