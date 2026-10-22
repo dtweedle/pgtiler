@@ -1,6 +1,6 @@
 # Two deploy targets, deliberately identical in configuration.
 #
-#   dev         → dev.tweed.nz (access-restricted)
+#   dev         → dev.tweed.nz (currently unprotected — see docs/CACHING.md)
 #   production  → maps.tweed.nz (once the custom domain is moved off the bucket)
 #
 # Both read the same R2 bucket and carry the same vars, so dev exercises the real

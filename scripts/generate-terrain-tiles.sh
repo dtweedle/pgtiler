@@ -161,9 +161,9 @@ echo "  lets browsers decode precise elevation from standard image"
 echo "  tiles without needing a special raster format."
 echo ""
 echo "  The tile pyramid is built from zoom ${MIN_ZOOM} (whole world in"
-echo "  one tile) down to zoom ${MAX_ZOOM} (~38m/pixel — matching the"
-echo "  30m source resolution). Each zoom level has 4x the tiles of"
-echo "  the level above."
+echo "  one tile) down to zoom ${MAX_ZOOM} (512px tiles, ~19m/pixel at the"
+echo "  equator — finer than the 30m source). Each zoom level has 4x the"
+echo "  tiles of the level above."
 echo ""
 echo "  This will take a while..."
 echo ""
@@ -227,8 +227,12 @@ echo ""
 
 rm -f "$STAGED_PMTILES_HOST"
 
+# convert stages every tile in a temp file about the size of the MBTiles. Its
+# default /tmp is inside Docker Desktop's VM disk (58 GB, shared with images and
+# volumes), which the full Australia build overflowed at 81%. Keep it on the
+# bind mount, which is the host disk.
 docker compose run --rm pmtiles \
-    convert "$MBTILES_CONTAINER" "$STAGED_PMTILES_CONTAINER"
+    convert --tmpdir=/data/datasets/tmp "$MBTILES_CONTAINER" "$STAGED_PMTILES_CONTAINER"
 
 mv -f "$STAGED_PMTILES_HOST" "$PMTILES_HOST"
 

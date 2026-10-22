@@ -8,7 +8,7 @@ pmtiles:
   paths:
     - /tiles
 
-# Serve any .mbtiles files dropped into the tiles/ or conversion/ directory
+# Serve any .mbtiles files dropped into the tiles/ directory
 mbtiles:
   paths:
     - /tiles

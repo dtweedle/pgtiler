@@ -29,7 +29,7 @@ The sidebar has fixed radio-button groups. A new archive needs an option added t
 - **Contours** — none, local full, local test
 - **Hillshade** — none, local full, local test, ESRI
 - **Terrain** — 3D extrusion: none, local full, local test
-- **Styles** — the production styles in `styles/` (`squiggly-outdoor`, `hams-outdoor`)
+- **Stylesheets** — the production styles in `styles/` (`squiggly-outdoor`, `hams-outdoor`), loaded as-is
 
 Local options read Martin on `localhost:3000`. The *Tile catalog* link opens Martin's `/catalog`, which lists everything Martin has discovered, including archives the sidebar doesn't offer.
 
@@ -38,6 +38,11 @@ If `R2_PUBLIC_URL` is set, remote options also appear in each group, loaded from
 ```bash
 R2_PUBLIC_URL=https://dev.tweed.nz ./scripts/preview.sh
 ```
+
+> **The Stylesheets options load no squiggly tiles at the moment.** The style
+> files' sources point at `https://maps.tweed.nz`, which is still the R2 bucket
+> rather than the worker, so every TileJSON request 404s. They'll work once
+> `maps.tweed.nz` moves to the worker (see `worker/README.md`).
 
 ## Styling
 

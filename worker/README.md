@@ -11,7 +11,7 @@ for `squiggly.v1.base.pmtiles` could be served back with bytes that didn't match
 the range asked for — and re-uploading an archive left old byte ranges cached
 under the same URL.
 
-There was a second problem underneath that one: the archives are 1.2–4.8 GB, and
+There was a second problem underneath that one: the archives are 1.3 GB to ~50 GB, and
 Cloudflare will not cache an object over 512 MB on Free/Pro/Business plans (5 GB
 on Enterprise). They were never eligible for the edge cache at all, so every
 Range request went the whole way to R2 — and a Range miss on an oversized object
@@ -19,7 +19,8 @@ can be filled by fetching the entire file, which is where the occasional
 full-archive response came from.
 
 The worker reads the archive server-side and returns **one response per tile**.
-Every tile is a few KB, comfortably cacheable, with its own cache entry and `ETag`.
+Every tile is a few KB to a few hundred KB (terrain PNGs reach ~600 KB),
+comfortably cacheable, with its own cache entry and `ETag`.
 
 ## Versioned tile URLs
 
@@ -141,7 +142,7 @@ only `wrangler dev --remote` proves it end to end against R2.
 ```bash
 # from the repo root
 ./scripts/deploy-worker.sh dev             # deploy to dev.tweed.nz
-./scripts/deploy-worker.sh production      # deploy to maps.tweed.nz
+./scripts/deploy-worker.sh production      # deploys, but no hostname yet — see Custom domain
 ./scripts/deploy-worker.sh --local         # run on :8787, local R2 emulation
 ./scripts/deploy-worker.sh --local-remote  # run on :8787, real R2 bucket
 ```
@@ -195,7 +196,10 @@ to the worker:
 2. Uncomment the `[[env.production.routes]]` block in `wrangler.toml`.
 3. `./scripts/deploy-worker.sh production`
 
-Until then the worker is reachable at its `*.workers.dev` URL.
+Until then the production worker isn't reachable at all: `workers_dev` is off
+and it has no route. Only dev serves tiles. `styles/*.json` and `.env`'s
+`R2_PUBLIC_URL` already name `maps.tweed.nz`, so they return 404s until this is
+done.
 
 ## Local dev
 
@@ -233,6 +237,6 @@ Responses carry `X-Tile-Cache: hit|miss` and `X-Tile-Version` — handy for
 confirming the edge cache is doing its job and which archive version answered.
 
 ```bash
-curl -sD- -o/dev/null https://maps.tweed.nz/squiggly.v1.base/<version>/6/57/38.mvt \
+curl -sD- -o/dev/null https://dev.tweed.nz/squiggly.v1.base/<version>/6/57/38.mvt \
   | grep -iE 'cache-control|x-tile'
 ```

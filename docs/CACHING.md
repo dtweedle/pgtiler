@@ -11,7 +11,7 @@ related:
   - "[[GENERATION]]"
   - "[[GLOSSARY]]"
   - "[[worker/README]]"
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Caching
@@ -22,7 +22,7 @@ built is [[GENERATION]]; how a tile reaches the screen is [[SERVING]]. Terms are
 defined in [[GLOSSARY]] — hover any link to preview it.
 
 > [!abstract] The short version
-> The PMTiles archives are 1.2–4.8 GB, which is far too large
+> The PMTiles archives are 1.3 GB to ~50 GB, which is far too large
 > for Cloudflare to cache. Serving them directly meant every request travelled the
 > full distance to R2. The fix is a Worker that opens the archive server-side and
 > returns one small, individually cacheable response per tile, at a URL that
@@ -84,9 +84,10 @@ Three consequences:
 - **Cache API storage is per-PoP.** A tile warmed in Sydney is a miss in Perth.
   R2 read volume scales with (unique tiles × PoPs receiving traffic), not unique
   tiles.
-- **Edge caching works on `*.workers.dev`.** Older Cloudflare guidance said the
-  Cache API was a no-op there; that is not what this worker observes. Against
-  the dev deployment `X-Tile-Cache` goes `miss` then `hit`, with
+- **Edge caching works on the dev deployment.** Older Cloudflare guidance said
+  the Cache API was a no-op on `*.workers.dev`; that is not what this worker
+  observed while dev ran there, before it moved to `dev.tweed.nz` in August
+  2026. On both, `X-Tile-Cache` goes `miss` then `hit`, with
   `CF-Cache-Status: HIT` and a rising `Age` from Cloudflare's own CDN layer.
   Dev therefore exercises both cache layers, not just the archive reads.
 
@@ -135,8 +136,8 @@ to satisfy a partial request, this produced the occasional full-archive
 response — a multi-gigabyte download aimed at a browser.
 
 The fix isn't better control over range caching. It's to stop asking the edge to
-cache a 4.8 GB object at all, and instead ask it to cache millions of 5–100 KB
-tiles, each with its own URL.
+cache a multi-gigabyte object at all, and instead ask it to cache hundreds of
+thousands of tiles, from a few KB to ~600 KB, each with its own URL.
 
 ---
 
@@ -267,9 +268,10 @@ at the edge, and in browsers, under a URL that will not change until the archive
 is re-uploaded and its ETag moves. Fixing the code does not evict them.
 
 There is no cheap purge for this. `caches.default` has no zone-wide purge on a
-`*.workers.dev` hostname, and the version segment is derived from the archive
-ETag rather than from anything deploy-time, so a code fix alone cannot mint new
-URLs. Options, in order of cost:
+`*.workers.dev` hostname. Both targets now use custom domains, where a zone purge
+may reach Cache API entries — unverified. And the version segment is derived
+from the archive ETag rather than from anything deploy-time, so a code fix alone
+cannot mint new URLs. Options, in order of cost:
 
 1. **Accept it in dev.** Only tiles actually requested during the bad window are
    poisoned, and dev is disposable.
@@ -289,7 +291,7 @@ wrong encoding is exactly the failure that pins itself.
 Every tile response carries `X-Tile-Cache: hit|miss` and `X-Tile-Version`.
 
 ```bash
-curl -sD- -o/dev/null https://maps.tweed.nz/squiggly.v1.base/<version>/8/234/151.mvt \
+curl -sD- -o/dev/null https://dev.tweed.nz/squiggly.v1.base/<version>/8/234/151.mvt \
   | grep -iE 'cache-control|etag|age|x-tile'
 ```
 
@@ -320,6 +322,6 @@ curl -sD- -o/dev/null https://maps.tweed.nz/squiggly.v1.base/<version>/8/234/151
   would tighten it at the cost of one small fetch per map load.
 - **Per-PoP cold starts after a redeploy.** Each redeploy starts an archive's
   edge cache from empty, so early users pay R2 latency while it refills. Modest
-  for the base map, more noticeable for the 4.8 GB terrain archive if it's
-  redeployed often. Per-archive ETags mean a terrain rebuild doesn't disturb the
+  for the base map, more noticeable for the ~50 GB full-Australia terrain
+  archive if it's redeployed often. Per-archive ETags mean a terrain rebuild doesn't disturb the
   base map's cache.

@@ -9,7 +9,7 @@ related:
   - "[[CACHING]]"
   - "[[SERVING]]"
   - "[[GENERATION]]"
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Glossary
@@ -143,6 +143,20 @@ matters for [[CACHING#The stale-isolate hazard|the stale-isolate hazard]].
 
 ## Tiles and data
 
+### DEM
+
+Digital elevation model: a raster where each pixel holds a height in metres
+instead of a colour. This project's is [[#Copernicus GLO-30]], about 30 m per
+pixel. Both contours and terrain are derived from it — see
+[[GENERATION#Elevation data is a grid of numbers]].
+
+### Tile pyramid
+
+The full set of map tiles across zoom levels. z0 is one tile covering the world,
+and each level splits every tile into four, so z12 has 16.7 million worldwide.
+Most of an archive's tiles, and most of a build's time, sit in the deepest level.
+See [[GENERATION#Maps are served as tiles, in a pyramid]].
+
 ### PMTiles
 
 A single-file tile archive — header, root directory, metadata, leaf directories,
@@ -156,6 +170,9 @@ in [[SERVING#How PMTiles resolves a tile]].
 A SQLite database of tiles, keyed by zoom, column and row (TMS row order, so `y`
 is flipped relative to XYZ). Tippecanoe and rio-rgbify write it; `pmtiles convert`
 repackages it as PMTiles. Here it is only ever an intermediate in `datasets/tmp/`.
+Tippecanoe indexes the tiles by zoom, column and row, but rio-rgbify doesn't, so
+every lookup in a terrain MBTiles reads through the table — see
+[[GENERATION#Problem 1 — no index on the tiles table]].
 
 ### TileJSON
 

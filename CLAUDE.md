@@ -30,7 +30,7 @@ docker compose logs -f martin
 # Download Copernicus DEM
 ./scripts/download-copernicus-dem.sh
 
-# Build VRT index files (must run before contour/terrain generation)
+# Build VRT index files (terrain needs them; download-copernicus-dem.sh already runs this)
 ./scripts/build-vrts.sh
 
 # Generate contour lines (parallel, outputs PMTiles)
@@ -123,19 +123,19 @@ Martin auto-serves any `.pmtiles` or `.mbtiles` file in `tiles/`. The filename (
 - `squiggly.v1.terrain` — RGB-encoded DEM (terrarium encoding, for hillshade + 3D)
 
 **VRT files (built by `build-vrts.sh`):**
-- `australia-dem.vrt` — all Copernicus tiles (868), used by contour generation
-- `australia-terrain.vrt` — all of Australia (same 868 tiles), used by terrain generation
+- `australia-terrain.vrt` — all of Australia (868 tiles), read by terrain generation
+- `australia-dem.vrt` — the same 868 tiles; built but read by nothing. Contour generation reads the GeoTIFFs in `datasets/sources/copernicus-dem/` directly
 
 **Processing pipelines (all Dockerised):**
 - OSM: `Geofabrik .osm.pbf → Planetiler → .pmtiles`
 - Contours: `Copernicus DEM .tif → gdalwarp (smooth) → gdal_contour (parallel) → GeoJSON → tippecanoe → .mbtiles → pmtiles → .pmtiles`
 - Terrain: `Copernicus DEM .tif → australia-terrain.vrt → gdalwarp (merge) → rio-rgbify (terrarium) → .mbtiles → pmtiles → .pmtiles`
 
-**Production serving (`worker/`):** a Cloudflare Worker reads the PMTiles archives out of R2 and serves `/{archive}.json` (TileJSON) and `/{archive}/{version}/{z}/{x}/{y}.{ext}` (one response per tile). Do **not** point clients at the raw `.pmtiles` objects over `pmtiles://` — the archives are 1.2–4.8 GB, well over Cloudflare's 512 MB cacheable-object limit, so every Range request misses to R2 and an oversized-object miss can be filled by fetching the whole file.
+**Production serving (`worker/`):** a Cloudflare Worker reads the PMTiles archives out of R2 and serves `/{archive}.json` (TileJSON) and `/{archive}/{version}/{z}/{x}/{y}.{ext}` (one response per tile). Do **not** point clients at the raw `.pmtiles` objects over `pmtiles://` — the archives are 1.3 GB to ~50 GB (full-Australia terrain), far over Cloudflare's 512 MB cacheable-object limit, so every Range request misses to R2 and an oversized-object miss can be filled by fetching the whole file.
 
-`{version}` is the first 10 chars of the archive's R2 ETag, which is already a content hash — nothing to track at upload time. It makes tile URLs content-addressed, so they cache `immutable` in the browser as well as at the edge, and a re-upload moves tiles to new URLs instead of needing a purge. TileJSON has a 5-minute TTL and is the only thing clients refetch, so redeploys propagate in minutes. `styles/*.json` reference the worker, not the bucket. See `worker/README.md`.
+`{version}` is the first 10 chars of the archive's R2 ETag, which is already a content hash — nothing to track at upload time. It makes tile URLs content-addressed, so they cache `immutable` in the browser as well as at the edge, and a re-upload moves tiles to new URLs instead of needing a purge. TileJSON has a 5-minute TTL and is the only thing clients refetch, so redeploys propagate in minutes. `styles/*.json` reference `maps.tweed.nz`, the worker's intended production host, which still points at the bucket until the custom domain is moved — only `dev.tweed.nz` runs the worker today. See `worker/README.md`.
 
-**Preview page:** `preview/index.html` uses MapLibre GL JS with OpenFreeMap as the base map and adds Martin layers on top. Run a local HTTP server to avoid CORS issues.
+**Preview page:** `preview/index.html` uses MapLibre GL JS with OpenFreeMap as the base map and adds Martin layers on top, plus worker layers when `R2_PUBLIC_URL` is set. Run a local HTTP server to avoid CORS issues.
 
 ## Key URLs when running locally
 

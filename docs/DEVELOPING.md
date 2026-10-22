@@ -12,7 +12,7 @@ related:
   - "[[SERVING]]"
   - "[[worker/README]]"
   - "[[scripts/SCRIPTS]]"
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Developing
@@ -90,7 +90,7 @@ configured in `scripts/test-config.sh`.
 
 ```bash
 ./scripts/build-vrts.sh --test              # builds the -test VRTs (seconds)
-./scripts/generate-terrain-tiles.sh --test  # minutes
+./scripts/generate-terrain-tiles.sh --test  # under a minute
 ./scripts/generate-contours.sh --test       # minutes
 ./scripts/generate-osm-tiles.sh --test      # minutes — still reads the full .pbf, clips with --bounds
 docker compose restart martin               # pick up the new archives
@@ -129,7 +129,7 @@ The worker's test suite reads these same `-test` archives (see
 
 There's no scripted middle rung yet: a few-dozen-tile regional build that would
 catch seams in tens of minutes instead of hours. The March benchmark did this by
-temporarily narrowing `TERRAIN_*` in `build-vrts.sh` (146–155°E, 27–37°S, 77 DEM
+temporarily narrowing `TERRAIN_*` in `build-vrts.sh` (146–154°E, 27–37°S, 69 DEM
 tiles, about 22 minutes for terrain). Adding a `--region` flag is the obvious
 next step if this rung gets used often.
 
@@ -180,9 +180,21 @@ numpy. It reports:
 
 It exits non-zero and lists the problems if anything fails.
 
-Reference result: on the old Eastern Seaboard archive it reads Kosciuszko at
-2226 m and Hotham at 1860 m, with spike-scan maxima around 5–20 m. The test tile
-reads The Horn at 1703 m.
+Reference results:
+- **Test tile:** The Horn reads 1703 m.
+- **Full Australia, October 2026:** Kosciuszko 2226 m, Hotham 1860 m, Ossa
+  1609 m, Zeil 1518 m, Uluru 856 m, Bluff Knoll 1061 m, Bartle Frere 1538 m.
+  That's 73 m low but inside tolerance. The Tasman Sea reads 0 m, and the
+  spike-scan maximum is 25 m.
+
+> [!warning] A `-test` archive is only as trustworthy as whatever last wrote it
+> The checker reads the MBTiles, not the `.pmtiles` that Martin serves. Until
+> 2026-10-22, `tiles/squiggly.v1.terrain-test.pmtiles` was the output of the
+> March benchmark's broken GDAL-from-terrarium-VRT run
+> ([[GENERATION#Pipeline 3 — Terrain]]). The script's own MBTiles passed, while
+> the preview showed spikes along the 256, 512 and 768 m contours. If the preview
+> disagrees with the checker, rerun `generate-terrain-tiles.sh --test` before
+> debugging anything else. Benchmark output belongs in `datasets/tmp/`, never `tiles/`.
 
 > [!tip] Cross-checking against the source DEM
 > To compare a decoded height with the raw DEM at the same point:
@@ -210,9 +222,14 @@ docker compose restart martin     # after any new archive
 ```
 
 The sidebar has fixed option groups: **Maps**, **Contours**, **Hillshade**,
-**Terrain** and **Styles**. Each local layer has a full and a `-test` option. If
+**Terrain** and **Stylesheets**. Each local layer has a full and a `-test` option. If
 `R2_PUBLIC_URL` is set, remote options load from that worker as well (see
 [[#7 · Upload and verify on dev]]). Details are in [[preview/PREVIEW]].
+
+> [!note] Stylesheets show no squiggly tiles yet
+> They load `styles/*.json` as-is, and those point at `maps.tweed.nz`, which is
+> still the R2 bucket, not the worker. Use the Maps, Contours, Hillshade and
+> Terrain options to look at a build.
 
 What to look for:
 
@@ -263,16 +280,23 @@ archives and their multipart ETags. Layout, config and deploy targets are in
 ## 5 · Pre-flight and the full build
 
 - [ ] The changed pipeline passes steps 1–3 in test mode.
-- [ ] **Disk:** `df -h .` Rough needs on top of what's already there:
-  - Terrain: about 26 GB merged GeoTIFF, plus MBTiles and PMTiles of very
-    roughly 40–60 GB each for all of Australia. That's an estimate scaled
-    from the benchmark, not a measurement.
+- [ ] **Disk:** `df -h .` Needs on top of what's already there:
+  - Terrain, measured on the October 2026 build: a 24 GB merged GeoTIFF, a 49 GB
+    MBTiles, and a conversion temp file that grows to about the MBTiles' size.
+    The PMTiles should be of similar size, though that's not yet measured. Allow
+    about 175 GB.
   - Contours: the smoothed DEM tiles, about 50 MB each uncompressed (≈ 45 GB
     for 868), held until the run finishes, plus the GeoJSON.
+- [ ] **Docker's own disk:** big temporary files must go to a bind mount, not the
+  container's `/tmp`. Docker Desktop's VM disk is 58 GB and shared with every
+  image. The terrain convert step passes `--tmpdir` for this reason
+  ([[GENERATION#Problem 2 — the temp file landed on Docker's small disk]]).
 - [ ] **Docker resources:** CPUs and memory set as above. Override the terrain
   worker count with `RGBIFY_WORKERS=N` if needed.
-- [ ] **Time:** terrain for all of Australia is estimated at 4–5 hours with about
-  10 workers (scaled from the benchmark), longer with fewer. Contours take hours.
+- [ ] **Time:** terrain for all of Australia, measured with 8 workers: 17 min to
+  merge and 5 h 20 min to encode. Then hours more to convert, until the missing
+  index is fixed ([[GENERATION#Problem 1 — no index on the tiles table]]).
+  Contours take hours.
 - [ ] **Keep the Mac awake:** prefix the command with `caffeinate -is`.
 - [ ] **Keep the current archive for rollback,** outside `tiles/`. Martin serves
   everything in `tiles/`, and `upload-tiles.sh` uploads every non-test

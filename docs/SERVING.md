@@ -12,7 +12,7 @@ related:
   - "[[GENERATION]]"
   - "[[GLOSSARY]]"
   - "[[worker/README]]"
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Serving
@@ -42,7 +42,7 @@ flowchart LR
 |---|---|---|
 | Server | Martin (`docker compose`) | Cloudflare Worker (`worker/`) |
 | Storage | `tiles/` on disk | R2 bucket `squiggly-maps-v1` |
-| Host | `localhost:3000` | `maps.tweed.nz` |
+| Host | `localhost:3000` | `maps.tweed.nz` (intended — today only `dev.tweed.nz` runs the worker) |
 | Source of truth for a source ID | filename | R2 object key |
 
 Martin auto-discovers any `.pmtiles` or `.mbtiles` file in `tiles/` and uses the
@@ -127,7 +127,8 @@ byte-range reads, without an index server:
 
 Resolving `z/x/y`:
 
-1. **Header** (first ~16 KB) — magic number, tile type, zoom range, bounds, and
+1. **Header** (127 bytes; readers fetch the first 16 KB, which usually takes in
+   the root directory too) — magic number, tile type, zoom range, bounds, and
    the offsets of every other section.
 2. **Root directory** — maps tile IDs to either a tile's `(offset, length)` or a
    leaf directory to descend into. Tiles are ordered along a Hilbert curve, so
@@ -223,7 +224,10 @@ relief drawn into the map) and once feeding the top-level `terrain` block (3D
 elevation of the whole scene). Same archive, two consumers.
 
 `upload-style.sh` rewrites the host in these URLs to `R2_PUBLIC_URL` on upload,
-so the same style file serves local, dev and production.
+so the same style file serves dev and production. It can't serve local Martin,
+whose URLs have a different shape, shown next. The preview's Stylesheets options
+load the files unrewritten, pointing at `maps.tweed.nz`, so they show no squiggly
+tiles until that host moves to the worker.
 
 Against local Martin the same pattern takes XYZ URLs directly, since Martin has
 no version segment:

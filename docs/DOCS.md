@@ -9,7 +9,7 @@ aliases:
 related:
   - "[[README]]"
   - "[[CLAUDE]]"
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Docs
@@ -52,7 +52,8 @@ flowchart LR
 
 What is known to be wrong, unverified or undecided, gathered in one place:
 
-- [[GENERATION#Known gaps]] — terrain coverage and metadata, the duplicate VRTs,
+- [[GENERATION#Known gaps]] — the slow terrain conversion (no MBTiles index), the
+  full-Australia terrain not yet uploaded, emulated rio-rgbify, the unused VRT,
   no incremental rebuilds
 - [[CACHING#Assumptions]] — Cloudflare and R2 behaviour we rely on but don't control
 - [[CACHING#Open questions]] — dev exposure, TileJSON revalidation, cold starts
