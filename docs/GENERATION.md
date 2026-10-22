@@ -235,6 +235,25 @@ Two conclusions worth keeping:
 
 The bottleneck is entirely tile encoding and PNG writing, not the warp.
 
+> [!note] Worker count
+> The benchmark ran 10 workers, but until October 2026 the script never passed
+> `-j`, so real builds ran at rio-rgbify's default of 4. It now passes one worker
+> per CPU Docker has (`RGBIFY_WORKERS=N` overrides).
+
+Output: z0–12 (~38 m/pixel at z12, roughly matching the 30 m source).
+
+> [!warning] Terrain metadata is wrong and it isn't cosmetic.
+> The archive declares global bounds (`-180,-85 → 180,85`) when it covers Australia, carries an empty
+> `name`, and has **no `attribution`** — despite Copernicus requiring attribution.
+> Contours get theirs from tippecanoe's `--attribution` flag; rio-rgbify has no
+> equivalent, so nothing sets it. Clients that render attribution automatically
+> from TileJSON will show nothing for terrain.
+>
+> **Fixed in the script, October 2026:** `generate-terrain-tiles.sh` writes name,
+> attribution and the merged GeoTIFF's extent into the MBTiles metadata table,
+> and `pmtiles convert` carries them into the header and JSON metadata. Archives
+> built before that still have the problem until regenerated.
+
 ---
 
 ## Test mode
@@ -277,7 +296,7 @@ Collected from the walkthrough above, in rough order of how much they matter:
 1. **Terrain covers only the Eastern Seaboard** — the full-Australia build was
    configured but never run. See [[#The two VRTs are now the same file in all but name]].
 2. **Terrain has no attribution and wrong bounds** — a licence-compliance issue,
-   not just untidy metadata. Needs fixing at the pmtiles-convert step.
+   not just untidy metadata. Fixed in the script; takes effect on the next build.
 3. **The two VRTs are identical** — a distinction that no longer exists. Collapse
    to one, or re-narrow terrain.
 4. **No incremental regeneration** — a one-tile DEM update rebuilds everything.

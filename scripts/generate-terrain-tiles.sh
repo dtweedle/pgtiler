@@ -9,9 +9,12 @@ set -euo pipefail
 # The "terrarium" encoding packs elevation into RGB channels:
 #   elevation = (R × 256 + G + B / 256) - 32768
 #
-# Uses the rgbify and pmtiles Docker services.
-# Input:    datasets/sources/australia-dem.vrt (built by download-copernicus-dem.sh)
-# Output:   tiles/australia-terrain.pmtiles
+# Uses the gdal, rgbify and pmtiles Docker services.
+# Input:    datasets/sources/australia-terrain.vrt (built by build-vrts.sh)
+# Output:   tiles/squiggly.v1.terrain.pmtiles
+#
+# Environment:
+#   RGBIFY_WORKERS  rio-rgbify worker processes (default: CPUs available to Docker)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -41,8 +44,61 @@ MBTILES_HOST="$PROJECT_DIR/datasets/tmp/australia-terrain${SUFFIX}.mbtiles"
 PMTILES_CONTAINER="/data/tiles/squiggly.v1.terrain${SUFFIX}.pmtiles"
 PMTILES_HOST="$PROJECT_DIR/tiles/squiggly.v1.terrain${SUFFIX}.pmtiles"
 
+# convert writes here first and the result is moved into tiles/ only once it is
+# complete, so the archive Martin is serving stays intact until then.
+STAGED_PMTILES_CONTAINER="/data/datasets/tmp/squiggly.v1.terrain${SUFFIX}.pmtiles"
+STAGED_PMTILES_HOST="$PROJECT_DIR/datasets/tmp/squiggly.v1.terrain${SUFFIX}.pmtiles"
+
 MIN_ZOOM=0
 MAX_ZOOM=12
+
+# Written into the archive metadata. rio-rgbify sets none of this itself, so
+# without it TileJSON has no attribution, an empty name and whole-world bounds.
+# Copernicus requires attribution; this matches the contour archive's.
+ARCHIVE_NAME="squiggly.v1.terrain${SUFFIX}"
+ARCHIVE_DESCRIPTION="Copernicus GLO-30 DEM, terrarium-encoded"
+ATTRIBUTION="© Copernicus DEM"
+
+# rio-rgbify encodes tiles in a pool of worker processes and defaults to 4.
+# Use every CPU Docker has unless told otherwise.
+if [[ -z "${RGBIFY_WORKERS:-}" ]]; then
+    RGBIFY_WORKERS="$(docker info --format '{{.NCPU}}' 2>/dev/null || true)"
+    [[ "$RGBIFY_WORKERS" =~ ^[0-9]+$ ]] || RGBIFY_WORKERS=4
+fi
+
+# Run inside the rgbify container (it has Python, sqlite3 and rasterio).
+# Reads the clean GeoTIFF's extent and writes it, with name and attribution,
+# into the MBTiles metadata table. Written to run on Python 2 or 3.
+SET_METADATA_PY='
+import sqlite3, sys
+import rasterio
+
+args = [a.decode("utf-8") if isinstance(a, bytes) else a for a in sys.argv[1:8]]
+tif, mbtiles, name, description, attribution, minzoom, maxzoom = args
+
+with rasterio.open(tif) as src:
+    b = src.bounds
+west, east = b.left, b.right
+south, north = max(b.bottom, -85.0511), min(b.top, 85.0511)
+
+meta = {
+    "name": name,
+    "description": description,
+    "attribution": attribution,
+    "bounds": "%.6f,%.6f,%.6f,%.6f" % (west, south, east, north),
+    "center": "%.6f,%.6f,%d" % ((west + east) / 2, (south + north) / 2, min(int(maxzoom), 5)),
+    "minzoom": minzoom,
+    "maxzoom": maxzoom,
+}
+
+db = sqlite3.connect(mbtiles)
+for key in sorted(meta):
+    db.execute("DELETE FROM metadata WHERE name = ?", (key,))
+    db.execute("INSERT INTO metadata (name, value) VALUES (?, ?)", (key, meta[key]))
+    print("  set " + key)
+db.commit()
+db.close()
+'
 
 # ── Preflight checks ──────────────────────────────────────────────────────
 
@@ -59,7 +115,7 @@ mkdir -p "$PROJECT_DIR/tiles"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 1/3 — Prepare VRT (set nodata → 0)"
+echo "  Step 1/4 — Prepare VRT (set nodata → 0)"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "  rio-rgbify doesn't respect GDAL nodata masks, so gaps in"
@@ -90,13 +146,14 @@ echo "  Size: $(du -h "$CLEAN_TIF_HOST" | cut -f1)"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 2/3 — RGB Terrain Encoding"
+echo "  Step 2/4 — RGB Terrain Encoding"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
-echo "  Input:    $VRT_HOST"
+echo "  Input:    $CLEAN_TIF_HOST"
 echo "  Output:   $MBTILES_HOST"
 echo "  Zoom:     ${MIN_ZOOM}–${MAX_ZOOM}"
 echo "  Encoding: terrarium"
+echo "  Workers:  ${RGBIFY_WORKERS} (override with RGBIFY_WORKERS=N)"
 echo ""
 echo "  rio-rgbify reads each elevation pixel and encodes the value"
 echo "  into the red, green, and blue channels of a PNG tile. This"
@@ -123,6 +180,7 @@ docker compose run --rm rgbify \
     --max-z "$MAX_ZOOM" \
     --min-z "$MIN_ZOOM" \
     --format png \
+    -j "$RGBIFY_WORKERS" \
     "$CLEAN_TIF_CONTAINER" \
     "$MBTILES_CONTAINER"
 
@@ -130,11 +188,33 @@ echo ""
 echo "  MBTiles written: $MBTILES_HOST"
 echo "  Size: $(du -h "$MBTILES_HOST" | cut -f1)"
 
-# ── Step 3: MBTiles → PMTiles ─────────────────────────────────────────────
+# ── Step 3: Archive metadata ─────────────────────────────────────────────
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Step 3/3 — Convert to PMTiles"
+echo "  Step 3/4 — Archive metadata"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
+echo "  name:        $ARCHIVE_NAME"
+echo "  attribution: $ATTRIBUTION"
+echo "  bounds:      extent of $(basename "$CLEAN_TIF_HOST")"
+echo ""
+echo "  pmtiles convert carries the MBTiles metadata table across: bounds"
+echo "  and center into the archive header, the rest into the JSON metadata"
+echo "  that the worker builds TileJSON from."
+echo ""
+
+docker compose run --rm -T --entrypoint sh rgbify -c \
+    'if command -v python3 >/dev/null 2>&1; then exec python3 "$@"; else exec python "$@"; fi' sh \
+    -c "$SET_METADATA_PY" \
+    "$CLEAN_TIF_CONTAINER" "$MBTILES_CONTAINER" \
+    "$ARCHIVE_NAME" "$ARCHIVE_DESCRIPTION" "$ATTRIBUTION" "$MIN_ZOOM" "$MAX_ZOOM"
+
+# ── Step 4: MBTiles → PMTiles ─────────────────────────────────────────────
+
+echo ""
+echo "════════════════════════════════════════════════════════════════════"
+echo "  Step 4/4 — Convert to PMTiles"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "  Input:  $MBTILES_HOST"
@@ -145,12 +225,20 @@ echo "  index. Any tile can be fetched with one HTTP range request —"
 echo "  no database server needed. Martin serves PMTiles directly."
 echo ""
 
+rm -f "$STAGED_PMTILES_HOST"
+
 docker compose run --rm pmtiles \
-    convert "$MBTILES_CONTAINER" "$PMTILES_CONTAINER"
+    convert "$MBTILES_CONTAINER" "$STAGED_PMTILES_CONTAINER"
+
+mv -f "$STAGED_PMTILES_HOST" "$PMTILES_HOST"
 
 echo ""
 echo "  PMTiles written: $PMTILES_HOST"
 echo "  Size: $(du -h "$PMTILES_HOST" | cut -f1)"
+echo ""
+echo "  Archive header and metadata — check bounds and attribution:"
+echo ""
+docker compose run --rm pmtiles show "$PMTILES_CONTAINER"
 
 # ── Summary ───────────────────────────────────────────────────────────────
 
@@ -165,9 +253,9 @@ echo ""
 echo "  In MapLibre, add a raster-dem source:"
 echo "    map.addSource('terrain', {"
 echo "      type: 'raster-dem',"
-echo "      tiles: ['http://localhost:3000/australia-terrain/{z}/{x}/{y}'],"
+echo "      tiles: ['http://localhost:3000/squiggly.v1.terrain${SUFFIX}/{z}/{x}/{y}'],"
 echo "      encoding: 'terrarium',"
-echo "      tileSize: 256"
+echo "      tileSize: 512"
 echo "    });"
 echo ""
 echo "  Then use it for hillshade:"

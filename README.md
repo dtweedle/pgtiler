@@ -249,11 +249,11 @@ Encodes elevation data as RGB terrain tiles that MapLibre uses for both hillshad
 elevation = (R × 256 + G + B / 256) - 32768
 ```
 
-The tool builds a tile pyramid from zoom 0 down to zoom 12 (~38m/pixel). Output is MBTiles.
+The tool builds a tile pyramid from zoom 0 down to zoom 12 (~38m/pixel), encoding in a pool of worker processes — one per CPU Docker has, or set `RGBIFY_WORKERS=N`. Output is MBTiles.
 
 rio-rgbify is slower than the alternatives and chosen anyway: terrarium is a base-256 number, so resampling *encoded* RGB corrupts elevation at every 256 m boundary. Only resample-then-encode is correct, and rio-rgbify is the only tool that does it. Benchmarks and the rejected approaches are in [docs/GENERATION.md](docs/GENERATION.md).
 
-**Known gap:** the terrain archive carries no `attribution` and declares global bounds. Copernicus requires attribution, so add it manually in any client until the pipeline sets it.
+**Metadata:** rio-rgbify writes no name, attribution or bounds, so the script sets them in the MBTiles before conversion — `© Copernicus DEM`, and the extent of the merged GeoTIFF. Archives built before October 2026 lack them.
 
 **Step 3 — Convert to PMTiles:**
 
