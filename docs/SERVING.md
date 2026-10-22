@@ -225,6 +225,24 @@ elevation of the whole scene). Same archive, two consumers.
 `upload-style.sh` rewrites the host in these URLs to `R2_PUBLIC_URL` on upload,
 so the same style file serves local, dev and production.
 
+Against local Martin the same pattern takes XYZ URLs directly, since Martin has
+no version segment:
+
+```js
+const demOpts = {
+  type: 'raster-dem',
+  tiles: ['http://localhost:3000/squiggly.v1.terrain/{z}/{x}/{y}'],
+  encoding: 'terrarium',
+  tileSize: 512
+};
+
+map.addSource('terrain-hillshade', demOpts);
+map.addLayer({ id: 'hillshade', type: 'hillshade', source: 'terrain-hillshade' });
+
+map.addSource('terrain-3d', demOpts);
+map.setTerrain({ source: 'terrain-3d', exaggeration: 1.5 });
+```
+
 ---
 
 ## Serving locally against a deployed worker

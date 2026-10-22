@@ -14,8 +14,10 @@ updated: 2026-10-22
 
 # Docs
 
-The entry point to pgtiler's design notes: why the system is shaped the way it
-is. What to run and in what order is in [[README]]; this is the reasoning behind it.
+The entry point to pgtiler's documentation. [[README]] is the short version —
+setup and the main commands. [[DEVELOPING]] is how to work on the project: test
+mode, verifying output, and what to check before a multi-hour build. The other
+notes are the design record: why the system is shaped the way it is.
 
 These notes are written for [Obsidian](https://obsidian.md/) with the repo root
 as the vault. Links are wikilinks, so on GitHub they show as plain `[[text]]`.
@@ -26,6 +28,7 @@ as the vault. Links are wikilinks, so on GitHub they show as plain `[[text]]`.
 
 | Note | Covers |
 |---|---|
+| [[DEVELOPING]] | The developer workflow — test mode, checking output, local servers, before and after a full build |
 | [[GENERATION]] | How source data becomes the three PMTiles archives, and why each pipeline is shaped that way |
 | [[SERVING]] | How a tile gets from an archive to the screen — formats, URL schemes, the request path |
 | [[CACHING]] | The four cache layers, versioning and redeploys, and what is verified versus assumed |
@@ -38,7 +41,9 @@ flowchart LR
     GLOSSARY -.-> GENERATION
     GLOSSARY -.-> SERVING
     GLOSSARY -.-> CACHING
-    class GENERATION,SERVING,CACHING,GLOSSARY internal-link;
+    DEVELOPING -->|tests and verifies| GENERATION
+    DEVELOPING -->|tests and verifies| SERVING
+    class DEVELOPING,GENERATION,SERVING,CACHING,GLOSSARY internal-link;
 ```
 
 ---

@@ -6,71 +6,56 @@ A local-first map tiling backend for a paragliding tracking service. Generates a
 
 | Where | What |
 |---|---|
-| This README | What to run, in what order, and what you get |
-| [docs/DOCS.md](docs/DOCS.md) | Index to the design notes — start here |
+| [docs/DOCS.md](docs/DOCS.md) | Index to everything below — start here |
+| [docs/DEVELOPING.md](docs/DEVELOPING.md) | Developer workflow: test mode, checking output, local servers, before and after a full build |
 | [docs/GENERATION.md](docs/GENERATION.md) | How the archives are built and why each pipeline is shaped that way |
 | [docs/SERVING.md](docs/SERVING.md) | How a tile reaches the screen — formats, URL schemes, request path |
 | [docs/CACHING.md](docs/CACHING.md) | The four cache layers, versioning and redeploys |
-| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Terms used across the design notes |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Terms used across the notes |
 | [worker/README.md](worker/README.md) | Cloudflare Worker layout, config and deployment |
-| [scripts/SCRIPTS.md](scripts/SCRIPTS.md) | One-line summary of every script |
+| [scripts/SCRIPTS.md](scripts/SCRIPTS.md) | One line per script |
+| [preview/PREVIEW.md](preview/PREVIEW.md) | The MapLibre preview page and styles |
 
-The `docs/` notes are written for [Obsidian](https://obsidian.md/): open
-the repo folder as a vault and the `[[wikilinks]]` between them work, with hover
-previews and backlinks. On GitHub those links show as plain text.
+The `docs/` notes are written for [Obsidian](https://obsidian.md/): open the repo
+folder as a vault and the `[[wikilinks]]` between them work, with hover previews
+and backlinks. On GitHub those links show as plain text.
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-- [AWS CLI](https://aws.amazon.com/cli/) (for Copernicus DEM download — no AWS account needed)
-- [Python 3](https://www.python.org/) (for the preview server)
-- [rclone](https://rclone.org/) (optional — for uploading tiles to Cloudflare R2)
-- [Node.js / npm](https://nodejs.org/) (optional — for the Cloudflare Worker via wrangler)
-- **~40 GB disk**: ~2 GB Australia OSM extract, **~27 GB** Copernicus DEM (868 tiles), ~11 GB generated archives, plus intermediates
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose — every geospatial tool runs in a container
+- [AWS CLI](https://aws.amazon.com/cli/) — Copernicus DEM download, no AWS account needed
+- [Python 3](https://www.python.org/) — preview server and `check-terrain.py`
+- [rclone](https://rclone.org/) and [Node.js / npm](https://nodejs.org/) — only for publishing (R2 uploads, the worker)
+- **Disk:** ~2 GB OSM extract, ~27 GB Copernicus DEM (868 tiles), ~11 GB of archives today. A full-Australia terrain build needs very roughly another 100 GB while it runs. See [DEVELOPING.md](docs/DEVELOPING.md#5--pre-flight-and-the-full-build).
 
 ## Quick start
 
 ```bash
-# 1. Start services
-docker compose up -d
-
-# 2. Download OSM data + generate base map tiles
-./scripts/init.sh
-./scripts/generate-osm-tiles.sh
-
-# 3. Download Copernicus DEM
-./scripts/download-copernicus-dem.sh
-
-# 4. Build VRT index files (contour + terrain regions)
-./scripts/build-vrts.sh
-
-# 5. Generate contour + terrain tiles
-./scripts/generate-contours.sh
-./scripts/generate-terrain-tiles.sh
-
-# 6. Restart Martin to pick up new tile sources
-docker compose restart martin
-
-# 7. Open the preview map
-./scripts/preview.sh
-# → open http://localhost:8080
+docker compose up -d                       # 1. Martin tile server on :3000
+./scripts/init.sh                          # 2. OSM extract
+./scripts/generate-osm-tiles.sh            #    → base map
+./scripts/download-copernicus-dem.sh       # 3. DEM tiles (also builds the VRTs)
+./scripts/generate-contours.sh             # 4. contours   — hours
+./scripts/generate-terrain-tiles.sh        #    terrain    — hours
+docker compose restart martin              # 5. pick up the new archives
+./scripts/preview.sh                       # 6. http://localhost:8080
 ```
 
-Everything above is local. To publish, see
-[Serving tiles in production](#serving-tiles-in-production-cloudflare-r2--worker).
+Every generation script takes `--test`, which builds a single 1°×1° tile around
+Bright, Victoria in minutes. **Use it before any full build.** The workflow is in
+[docs/DEVELOPING.md](docs/DEVELOPING.md).
 
-### Test mode
+## Tile archives
 
-All generation scripts accept a `--test` flag that processes only a single 1°×1° DEM tile around Bright, Victoria. This lets you iterate on the pipeline in minutes instead of hours.
+| Archive | Contents | Martin source / worker archive |
+|---|---|---|
+| `tiles/squiggly.v1.base.pmtiles` | OSM vector tiles (OpenMapTiles schema), z0–14 | `squiggly.v1.base` |
+| `tiles/squiggly.v1.contours.pmtiles` | 20 m contour lines, `elevation` attribute, z8–14 | `squiggly.v1.contours` |
+| `tiles/squiggly.v1.terrain.pmtiles` | Terrarium-encoded DEM for hillshade + 3D, z0–12 | `squiggly.v1.terrain` |
 
-```bash
-./scripts/build-vrts.sh --test
-./scripts/generate-contours.sh --test
-./scripts/generate-terrain-tiles.sh --test
-./scripts/generate-osm-tiles.sh --test
-```
-
-Test outputs are suffixed with `-test` (e.g. `squiggly.v1.terrain-test.pmtiles`) and appear as separate toggleable layers in the preview page.
+The filename minus `.pmtiles` is the source ID both locally and in production.
+`v1` is a schema version, bumped by hand when styles would break. `--test`
+variants are suffixed `-test`. How each is built: [docs/GENERATION.md](docs/GENERATION.md).
 
 ## Project structure
 
@@ -105,12 +90,13 @@ pgtiler/
 │   ├── src/                             # index, handler, router, services, utils
 │   ├── wrangler.toml                    # dev + production environments
 │   └── README.md                        # Worker docs
-├── docs/                                # Design decisions
-│   ├── DOCS.md                           # Index — start here
+├── docs/                                # Obsidian notes — design record + workflow
+│   ├── DOCS.md                          # Index — start here
+│   ├── DEVELOPING.md                    # Test, verify, then build at scale
 │   ├── GENERATION.md                    # How the archives are built, and why
 │   ├── SERVING.md                       # How tiles reach the screen
 │   ├── CACHING.md                       # The four cache layers
-│   └── GLOSSARY.md                       # Terms used across the notes
+│   └── GLOSSARY.md                      # Terms used across the notes
 ├── scripts/
 │   ├── init.sh                          # Download all datasets
 │   ├── download-osm-base-vectors.sh     # Download Australia OSM extract
@@ -122,6 +108,7 @@ pgtiler/
 │   ├── upload-tiles.sh                  # Upload production tiles to Cloudflare R2
 │   ├── deploy-worker.sh                 # Deploy / run the tile worker
 │   ├── upload-style.sh                  # Upload style JSON to R2
+│   ├── check-terrain.py                 # Verify a terrain build before upload
 │   ├── test-config.sh                   # Shared test mode configuration
 │   ├── preview.sh                       # Start local preview server
 │   └── SCRIPTS.md                       # Script documentation
@@ -132,233 +119,24 @@ pgtiler/
 └── CLAUDE.md                            # AI assistant instructions
 ```
 
-## Tile naming convention
 
-All output tile archives follow the pattern `squiggly.v1.<layer>.pmtiles`:
-
-| File | Martin source ID | Contents |
-|------|-----------------|----------|
-| `squiggly.v1.base.pmtiles` | `squiggly.v1.base` | OSM vector tiles (OpenMapTiles schema) |
-| `squiggly.v1.contours.pmtiles` | `squiggly.v1.contours` | Vector contour lines (20m interval) |
-| `squiggly.v1.terrain.pmtiles` | `squiggly.v1.terrain` | RGB-encoded terrain (terrarium encoding) |
-
-Martin derives the source ID from the filename (without extension). Test variants are suffixed with `-test`.
-
-## Docker services
-
-All processing tools run inside Docker — no local installs needed beyond the AWS CLI.
-
-| Service | Image | Profile | Purpose |
-|---------|-------|---------|---------|
-| `martin` | `ghcr.io/maplibre/martin` | default | Tile server (PMTiles/MBTiles) |
-| `planetiler` | `ghcr.io/onthegomap/planetiler` | `generate` | OSM → OpenMapTiles vector tiles |
-| `gdal` | `ghcr.io/osgeo/gdal:alpine-normal-latest` | `tools` | `gdalbuildvrt`, `gdal_contour`, `gdalwarp` |
-| `rgbify` | `helmi03/rio-rgbify` | `tools` | DEM → RGB-encoded terrain tiles |
-| `tippecanoe` | built from source (felt/tippecanoe, arm64) | `tools` | GeoJSON → vector MBTiles |
-| `pmtiles` | `protomaps/go-pmtiles` | `tools` | MBTiles → PMTiles conversion |
-
-Services with the `tools` profile only run on-demand via `docker compose run --rm <service>`. They do not start with `docker compose up`.
-
----
-
-## Pipeline: OSM Base Map
-
-Converts an OpenStreetMap extract into vector tiles using the OpenMapTiles schema.
-
-```
-australia.osm.pbf (Geofabrik)
-  → Planetiler → squiggly.v1.base.pmtiles
-    → Martin serves as vector tiles
-```
-
-**Step 1 — Download OSM extract:**
-
-`./scripts/download-osm-base-vectors.sh` fetches the latest Australia extract from [Geofabrik](https://download.geofabrik.de/) (~2 GB) into `datasets/sources/australia.osm.pbf`.
-
-**Step 2 — Generate vector tiles:**
-
-`./scripts/generate-osm-tiles.sh` runs [Planetiler](https://github.com/onthegomap/planetiler) via Docker. Planetiler reads the `.osm.pbf` file and builds a tile pyramid in the [OpenMapTiles](https://openmaptiles.org/schema/) schema — splitting map features (roads, water, buildings, landuse, POIs, etc.) into thematic layers, simplifying geometries per zoom level, and writing the result directly as `tiles/squiggly.v1.base.pmtiles`.
-
-**Output:** Martin auto-serves the PMTiles file. Tiles are available at `http://localhost:3000/squiggly.v1.base/{z}/{x}/{y}`.
-
----
-
-## Pipeline: Contour Lines
-
-Generates vector contour lines from elevation data and packages them as PMTiles.
-
-```
-868 × Copernicus .tif (30m elevation grids)
-  → gdalbuildvrt → australia-dem.vrt (all tiles)
-    → gdalwarp (3× upsample) → smoothed tiles
-      → gdal_contour (8 parallel) → GeoJSON files (one per tile)
-        → tippecanoe → contours.mbtiles (vector tiles)
-          → pmtiles convert → squiggly.v1.contours.pmtiles
-            → Martin serves as vector tiles
-```
-
-**Step 1 — Download DEM tiles:**
-
-`./scripts/download-copernicus-dem.sh` downloads [Copernicus GLO-30](https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model) DEM tiles from AWS S3 (`s3://copernicus-dem-30m`). Each tile is a 1°×1° GeoTIFF containing a grid of elevation values in metres at 30m resolution. Australia's bounding box spans 1,428 possible tiles; 868 exist (the rest are open ocean, which Copernicus doesn't publish). Downloads run 10 in parallel using `xargs -P`. No AWS account or API key is needed — the bucket is publicly accessible with `--no-sign-request`.
-
-**Step 2 — Build virtual raster:**
-
-`./scripts/build-vrts.sh` runs `gdalbuildvrt` inside the `gdal` Docker container. This creates `australia-dem.vrt` — a lightweight XML file that tells GDAL tools "treat these 868 files as a single seamless raster." No pixel data is copied. The VRT uses container paths (`/data/datasets/...`) so it works inside Docker.
-
-The same script also builds `australia-terrain.vrt`. This once covered a narrower terrain region, but terrain now spans all of Australia too, so **both VRTs index the identical 868 tiles** — see [docs/GENERATION.md](docs/GENERATION.md).
-
-**Step 3 — Smooth and trace contour lines:**
-
-`./scripts/generate-contours.sh` first upsamples each DEM tile 3× with cubic spline interpolation (30m → ~10m resolution) to produce smoother contour lines, then runs `gdal_contour` on each smoothed tile independently, with 8 containers in parallel. Lines are generated at **20m intervals** with an `elevation` attribute. Output is GeoJSON (one file per tile).
-
-**Step 4 — Build vector tiles:**
-
-[Tippecanoe](https://github.com/felt/tippecanoe) reads all the GeoJSON files, merges them, simplifies geometries per zoom level, and builds a vector tile pyramid as MBTiles. Tiles are generated for zoom levels 8–14.
-
-**Step 5 — Convert to PMTiles:**
-
-`pmtiles convert` repackages the MBTiles into `tiles/squiggly.v1.contours.pmtiles`.
-
-**Output:** Martin auto-serves the PMTiles file at `http://localhost:3000/squiggly.v1.contours/{z}/{x}/{y}`. Tile attributes are `elevation` (metres) and `ID`. Style index contours with a modulo expression: `["==", ["%", ["get", "elevation"], 100], 0]`.
-
----
-
-## Pipeline: Terrain (Hillshade + 3D)
-
-Encodes elevation data as RGB terrain tiles that MapLibre uses for both hillshade rendering and 3D terrain displacement. Terrain covers all of Australia — the same extent as the DEM download. (It was once limited to the Snowy Mountains and a radius around Manilla, NSW; that restriction is gone.)
-
-```
-868 × Copernicus .tif (all of Australia)
-  → gdalbuildvrt → australia-terrain.vrt
-    → gdalwarp (merge + nodata fill) → clean GeoTIFF
-      → rio-rgbify (terrarium encoding) → australia-terrain.mbtiles
-        → pmtiles convert → squiggly.v1.terrain.pmtiles
-          → Martin serves as raster-dem tiles
-            → MapLibre renders hillshade + 3D terrain client-side
-```
-
-**Step 1 — Prepare clean GeoTIFF:**
-
-`./scripts/generate-terrain-tiles.sh` first runs `gdalwarp` to merge the terrain VRT into a single compressed GeoTIFF with nodata gaps filled to 0 (sea level). This is necessary because rio-rgbify doesn't respect GDAL nodata masks.
-
-**Step 2 — RGB encoding:**
-
-[rio-rgbify](https://github.com/mapbox/rio-rgbify) reads each elevation pixel and encodes it into RGB channels using terrarium encoding:
-
-```
-elevation = (R × 256 + G + B / 256) - 32768
-```
-
-The tool builds a tile pyramid from zoom 0 down to zoom 12 (~38m/pixel), encoding in a pool of worker processes — one per CPU Docker has, or set `RGBIFY_WORKERS=N`. Output is MBTiles.
-
-rio-rgbify is slower than the alternatives and chosen anyway: terrarium is a base-256 number, so resampling *encoded* RGB corrupts elevation at every 256 m boundary. Only resample-then-encode is correct, and rio-rgbify is the only tool that does it. Benchmarks and the rejected approaches are in [docs/GENERATION.md](docs/GENERATION.md).
-
-**Metadata:** rio-rgbify writes no name, attribution or bounds, so the script sets them in the MBTiles before conversion — `© Copernicus DEM`, and the extent of the merged GeoTIFF. Archives built before October 2026 lack them.
-
-**Step 3 — Convert to PMTiles:**
-
-`pmtiles convert` repackages into `tiles/squiggly.v1.terrain.pmtiles`.
-
-**Output:** Martin serves the PMTiles as a raster-dem source. In MapLibre, use separate sources for hillshade and 3D terrain:
-
-```js
-const demOpts = {
-  type: 'raster-dem',
-  tiles: ['http://localhost:3000/squiggly.v1.terrain/{z}/{x}/{y}'],
-  encoding: 'terrarium',
-  tileSize: 512
-};
-
-// Hillshade — use its own source
-map.addSource('terrain-hillshade', demOpts);
-map.addLayer({ id: 'hillshade', type: 'hillshade', source: 'terrain-hillshade' });
-
-// 3D terrain — use a separate source
-map.addSource('terrain-3d', demOpts);
-map.setTerrain({ source: 'terrain-3d', exaggeration: 1.5 });
-```
-
----
-
-## Key URLs (when running locally)
-
-| URL | What |
-|-----|------|
-| `http://localhost:3000` | Martin health / root |
-| `http://localhost:3000/catalog` | All available tile sources |
-| `http://localhost:3000/{source}` | TileJSON for a source |
-| `http://localhost:3000/squiggly.v1.contours/{z}/{x}/{y}` | Contour vector tiles |
-| `http://localhost:3000/squiggly.v1.terrain/{z}/{x}/{y}` | RGB terrain tiles |
-| `http://localhost:8080` | MapLibre preview page |
-
-## Preview page
-
-`preview/index.html` uses MapLibre GL JS with a sidebar of radio-button groups:
-
-- **Maps** — basemap selection: None, Street (OpenFreeMap), Satellite (ESRI), Topo (OpenTopoMap), squiggly.v1.base, squiggly.v1.base-test
-- **Contours** — contour line overlays (local full, local test)
-- **Hillshade** — hillshade rendering from terrain DEM (local full, local test, ESRI)
-- **Terrain** — 3D terrain extrusion (local full, local test)
-
-If `R2_PUBLIC_URL` is configured in `.env`, additional remote options appear in each group, loaded from the tile worker as plain TileJSON + XYZ tiles. The preview server (`scripts/preview.sh`) generates `preview/config.js` from `.env` on startup.
-
-To point the preview at a deployed worker without editing `.env` — testing the dev deployment, for instance — export the URL for that run:
-
-```bash
-R2_PUBLIC_URL=https://dev.tweed.nz ./scripts/preview.sh
-```
-
-An exported value takes precedence over `.env`.
-
-## Styling
-
-The Squiggly Outdoor style is embedded in `preview/index.html` as a MapTiler Outdoor-inspired style for OpenMapTiles vector tiles. A standalone copy is also available at `preview/outdoor-style.json` for editing in [Maputnik](https://maputnik.github.io/). Font glyphs are served from `fonts.openmaptiles.org` (Open Sans Regular, Bold, and Italic).
-
-## Serving tiles in production (Cloudflare R2 + Worker)
-
-Production tiles live in an R2 bucket and are served by a Cloudflare Worker
-(`worker/`) that reads the PMTiles archives and returns one response per tile.
-
-1. Install [rclone](https://rclone.org/) and configure an R2 remote (see `scripts/upload-tiles.sh` header for setup steps)
-2. Copy `.env.example` to `.env` and fill in `R2_BUCKET` and `R2_PUBLIC_URL`
-3. `./scripts/upload-tiles.sh` — uploads all non-test `.pmtiles` files from `tiles/`
-4. `./scripts/deploy-worker.sh dev` — deploys the tile worker to `dev.tweed.nz` for testing (`npx wrangler login` first time), then `./scripts/deploy-worker.sh production`
-5. `./scripts/upload-style.sh` — uploads `styles/squiggly-outdoor.json` with its source URLs pointed at `R2_PUBLIC_URL`
-
-The worker exposes:
-
-| URL | What |
-|-----|------|
-| `{R2_PUBLIC_URL}/` | Index of servable archives |
-| `{R2_PUBLIC_URL}/squiggly.v1.base.json` | TileJSON — hands out the current version |
-| `{R2_PUBLIC_URL}/squiggly.v1.base/{version}/{z}/{x}/{y}.mvt` | Vector tiles, cached `immutable` |
-| `{R2_PUBLIC_URL}/squiggly.v1.terrain/{version}/{z}/{x}/{y}.png` | RGB terrain tiles |
-
-**Point clients at the `.json` URLs, never at hardcoded tile paths.** `{version}`
-is the first 10 characters of the archive's R2 ETag — already a content hash — so
-a re-upload moves every tile to a new URL rather than needing a purge. TileJSON is
-the indirection that hands out the current one.
-
-**Why not serve the `.pmtiles` files directly?** Two reasons. The archives are
-1.2–4.8 GB, past Cloudflare's ~512 MB cacheable-object limit, so every Range
-request missed through to R2 — and an oversized-object miss can be filled by
-fetching the whole file. On top of that, the edge cache keys on URL rather than
-byte range. One tile per URL fixes both.
-
-The R2 bucket does **not** need public access — the worker reads it through a
-binding.
-
-Deploy targets are `dev` (`dev.tweed.nz`) and `production` (`maps.tweed.nz`),
-configured identically in `worker/wrangler.toml`. Both run typecheck and the test
-suite before deploying. See [docs/CACHING.md](docs/CACHING.md) and
-`worker/README.md`.
-
-## Adding a new region
-
-1. Edit `scripts/download-osm-base-vectors.sh` to change the Geofabrik URL and filename
-2. Edit the bounding box in `scripts/download-copernicus-dem.sh` (`SOUTH`, `NORTH`, `WEST`, `EAST`)
-3. Edit the terrain region in `scripts/build-vrts.sh` (`TERRAIN_SOUTH`, etc.)
-4. Run the full pipeline: `init.sh → generate-osm-tiles.sh → download-copernicus-dem.sh → build-vrts.sh → generate-contours.sh → generate-terrain-tiles.sh`
+## Publishing (Cloudflare R2 + Worker)
+
+Production tiles live in an R2 bucket and are served by a Cloudflare Worker that
+returns one cacheable response per tile.
+
+1. Configure an rclone remote for R2 (steps in the header of `scripts/upload-tiles.sh`)
+2. `cp .env.example .env` and fill in `R2_BUCKET`, `R2_REMOTE` and `R2_PUBLIC_URL`
+3. `./scripts/upload-tiles.sh` — uploads every non-test archive in `tiles/`
+4. `./scripts/deploy-worker.sh dev`, check `dev.tweed.nz`, then `./scripts/deploy-worker.sh production`
+5. `./scripts/upload-style.sh` — uploads `styles/squiggly-outdoor.json` pointed at `R2_PUBLIC_URL`
+
+Point clients at `{R2_PUBLIC_URL}/{archive}.json` (TileJSON), never at tile paths
+or the raw `.pmtiles`. dev and production read the **same bucket**, so an upload
+is live on both at once. Check it first: see
+[docs/DEVELOPING.md](docs/DEVELOPING.md#7--upload-and-verify-on-dev). Why it's
+built this way: [docs/SERVING.md](docs/SERVING.md) and
+[docs/CACHING.md](docs/CACHING.md). Worker details: [worker/README.md](worker/README.md).
 
 ## Data sources and licenses
 

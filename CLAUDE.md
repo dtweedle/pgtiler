@@ -60,10 +60,13 @@ docker compose restart martin
 python3 scripts/check-terrain.py datasets/tmp/australia-terrain-test.mbtiles
 ```
 
+The full test-and-verify workflow is in `docs/DEVELOPING.md`.
+
 ## Recording architectural decisions
 
 Key architectural decisions live in `docs/`, one Markdown file per topic
-(`docs/CACHING.md`, `docs/SERVING.md`, etc.).
+(`docs/CACHING.md`, `docs/SERVING.md`, etc.). The developer workflow — test
+mode, verifying output, what to check before a full build — is `docs/DEVELOPING.md`.
 
 **When a decision is made that shapes how the system works — a serving strategy,
 a storage layout, a cache design, a format choice — write it up there.** Not just
@@ -99,9 +102,11 @@ updating, and say which — including when the answer is neither.** Documentatio
 drift is the default outcome otherwise; this check is part of the work, not a
 follow-up.
 
-- `README.md` — anything a user runs or sees: commands, scripts, the directory
-  tree, setup steps, URLs, the deployment sequence.
-- `docs/` — anything that changes *why* the system is shaped as it is:
+- `README.md` — kept short: what the project is, setup, quick start, the
+  directory tree, the deployment sequence. Detail belongs in `docs/`, not here.
+- `docs/DEVELOPING.md` — how to test and verify a change: test mode, checks,
+  local servers, the pre-flight list for full builds.
+- `docs/` (the other notes) — anything that changes *why* the system is shaped as it is:
   a new decision, a rejected option, a revised assumption, a corrected fact.
 - Also check the doc nearest the code you touched (`worker/README.md`,
   `scripts/SCRIPTS.md`) and any line references you may have invalidated.
