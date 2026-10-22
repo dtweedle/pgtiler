@@ -163,7 +163,7 @@ The only thing dev does not reproduce is the production hostname itself.
 | `production` | ✓ | ✓ |
 
 **dev.tweed.nz is currently unprotected** — see Open questions in
-`architecture/CACHING.md`. That is the
+`docs/CACHING.md`. That is the
 point: dev exercises the real archives, including their multipart ETags, which
 no local emulation reproduces. The worker only reads, so pointing dev at
 production data is safe.

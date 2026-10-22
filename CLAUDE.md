@@ -59,8 +59,8 @@ docker compose restart martin
 
 ## Recording architectural decisions
 
-Key architectural decisions live in `architecture/`, one Markdown file per topic
-(`architecture/CACHING.md`, `architecture/SERVING.md`, etc.).
+Key architectural decisions live in `docs/`, one Markdown file per topic
+(`docs/CACHING.md`, `docs/SERVING.md`, etc.).
 
 **When a decision is made that shapes how the system works — a serving strategy,
 a storage layout, a cache design, a format choice — write it up there.** Not just
@@ -70,19 +70,19 @@ verified versus assumed. These documents are for a reader who wasn't in the
 conversation.
 
 Update the relevant file when a decision changes rather than appending a new one.
-Code comments explain the line in front of you; `architecture/` explains why the
+Code comments explain the line in front of you; `docs/` explains why the
 shape of the system is what it is.
 
 ## Keeping the docs current
 
-**Before finishing any change, check whether `README.md` or `architecture/` needs
+**Before finishing any change, check whether `README.md` or `docs/` needs
 updating, and say which — including when the answer is neither.** Documentation
 drift is the default outcome otherwise; this check is part of the work, not a
 follow-up.
 
 - `README.md` — anything a user runs or sees: commands, scripts, the directory
   tree, setup steps, URLs, the deployment sequence.
-- `architecture/` — anything that changes *why* the system is shaped as it is:
+- `docs/` — anything that changes *why* the system is shaped as it is:
   a new decision, a rejected option, a revised assumption, a corrected fact.
 - Also check the doc nearest the code you touched (`worker/README.md`,
   `scripts/SCRIPTS.md`) and any line references you may have invalidated.

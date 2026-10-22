@@ -23,7 +23,7 @@
 ### Findings
 
 Benchmarked March 2026 (Eastern Seaboard, 69 DEM tiles, z0–12, 16,805 tiles).
-**Written up in [architecture/GENERATION.md](architecture/GENERATION.md)** —
+**Written up in [docs/GENERATION.md](docs/GENERATION.md)** —
 the constraint (terrarium is base-256, so resampling encoded RGB corrupts
 elevation at 256 m boundaries), the full comparison table, and why parallel
 zoom-splitting makes rio-rgbify 1.7–16.6× *slower*.

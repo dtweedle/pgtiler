@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # The worker reads the archives server-side and returns one response per tile,
 # so browsers never issue Range requests against R2 (which is what made the
-# cached responses unreliable). See architecture/CACHING.md.
+# cached responses unreliable). See docs/CACHING.md.
 #
 # Prerequisites:
 #   1. A Cloudflare account with the R2 bucket already created and populated

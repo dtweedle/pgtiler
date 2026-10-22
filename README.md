@@ -7,9 +7,9 @@ A local-first map tiling backend for a paragliding tracking service. Generates a
 | Where | What |
 |---|---|
 | This README | What to run, in what order, and what you get |
-| [architecture/GENERATION.md](architecture/GENERATION.md) | How the archives are built and why each pipeline is shaped that way |
-| [architecture/SERVING.md](architecture/SERVING.md) | How a tile reaches the screen — formats, URL schemes, request path |
-| [architecture/CACHING.md](architecture/CACHING.md) | The four cache layers, versioning, and the HTTP terminology behind them |
+| [docs/GENERATION.md](docs/GENERATION.md) | How the archives are built and why each pipeline is shaped that way |
+| [docs/SERVING.md](docs/SERVING.md) | How a tile reaches the screen — formats, URL schemes, request path |
+| [docs/CACHING.md](docs/CACHING.md) | The four cache layers, versioning, and the HTTP terminology behind them |
 | [worker/README.md](worker/README.md) | Cloudflare Worker layout, config and deployment |
 | [scripts/SCRIPTS.md](scripts/SCRIPTS.md) | One-line summary of every script |
 
@@ -99,7 +99,7 @@ pgtiler/
 │   ├── src/                             # index, handler, router, services, utils
 │   ├── wrangler.toml                    # dev + production environments
 │   └── README.md                        # Worker docs
-├── architecture/                        # Design decisions
+├── docs/                                # Design decisions
 │   ├── GENERATION.md                    # How the archives are built, and why
 │   ├── SERVING.md                       # How tiles reach the screen
 │   └── CACHING.md                       # The four cache layers
@@ -197,7 +197,7 @@ Generates vector contour lines from elevation data and packages them as PMTiles.
 
 `./scripts/build-vrts.sh` runs `gdalbuildvrt` inside the `gdal` Docker container. This creates `australia-dem.vrt` — a lightweight XML file that tells GDAL tools "treat these 868 files as a single seamless raster." No pixel data is copied. The VRT uses container paths (`/data/datasets/...`) so it works inside Docker.
 
-The same script also builds `australia-terrain.vrt`. This once covered a narrower terrain region, but terrain now spans all of Australia too, so **both VRTs index the identical 868 tiles** — see [architecture/GENERATION.md](architecture/GENERATION.md).
+The same script also builds `australia-terrain.vrt`. This once covered a narrower terrain region, but terrain now spans all of Australia too, so **both VRTs index the identical 868 tiles** — see [docs/GENERATION.md](docs/GENERATION.md).
 
 **Step 3 — Smooth and trace contour lines:**
 
@@ -243,7 +243,7 @@ elevation = (R × 256 + G + B / 256) - 32768
 
 The tool builds a tile pyramid from zoom 0 down to zoom 12 (~38m/pixel). Output is MBTiles.
 
-rio-rgbify is slower than the alternatives and chosen anyway: terrarium is a base-256 number, so resampling *encoded* RGB corrupts elevation at every 256 m boundary. Only resample-then-encode is correct, and rio-rgbify is the only tool that does it. Benchmarks and the rejected approaches are in [architecture/GENERATION.md](architecture/GENERATION.md).
+rio-rgbify is slower than the alternatives and chosen anyway: terrarium is a base-256 number, so resampling *encoded* RGB corrupts elevation at every 256 m boundary. Only resample-then-encode is correct, and rio-rgbify is the only tool that does it. Benchmarks and the rejected approaches are in [docs/GENERATION.md](docs/GENERATION.md).
 
 **Known gap:** the terrain archive carries no `attribution` and declares global bounds. Copernicus requires attribution, so add it manually in any client until the pipeline sets it.
 
@@ -342,7 +342,7 @@ binding.
 
 Deploy targets are `dev` (`dev.tweed.nz`) and `production` (`maps.tweed.nz`),
 configured identically in `worker/wrangler.toml`. Both run typecheck and the test
-suite before deploying. See [architecture/CACHING.md](architecture/CACHING.md) and
+suite before deploying. See [docs/CACHING.md](docs/CACHING.md) and
 `worker/README.md`.
 
 ## Adding a new region

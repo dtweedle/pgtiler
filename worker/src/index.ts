@@ -21,7 +21,7 @@
  *
  * This file does nothing but wire dependencies. The logic lives in
  * `handler.ts` and `services/`, which take those dependencies as arguments so
- * they can be exercised without a running worker. See `architecture/CACHING.md`.
+ * they can be exercised without a running worker. See `docs/CACHING.md`.
  */
 
 import { loadConfig } from "./config";

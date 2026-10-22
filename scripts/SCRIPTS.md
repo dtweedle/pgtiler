@@ -52,4 +52,4 @@ All generation scripts accept `--test` to process only a single 1°×1° DEM til
 Follow the existing pattern: `set -euo pipefail`, resolve `PROJECT_DIR` from `SCRIPT_DIR`, use `docker compose run --rm <service>` for processing tools, and include progress logging. Source `test-config.sh` when adding `--test` support.
 
 For why each pipeline is shaped the way it is — parameter rationale, rejected
-approaches, known gaps — see [architecture/GENERATION.md](../architecture/GENERATION.md).
+approaches, known gaps — see [docs/GENERATION.md](../docs/GENERATION.md).

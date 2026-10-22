@@ -111,5 +111,5 @@ done
 echo ""
 echo "  Tile URLs carry a version taken from the archive's ETag, so this upload"
 echo "  moves tiles to new URLs — no purge needed. Clients pick them up on their"
-echo "  next TileJSON fetch (5 min TTL). See architecture/CACHING.md."
+echo "  next TileJSON fetch (5 min TTL). See docs/CACHING.md."
 echo ""
