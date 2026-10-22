@@ -17,6 +17,9 @@ preview/config.js
 .obsidian/*
 !.obsidian/app.json
 
+# Python bytecode (scripts/check-terrain.py)
+__pycache__/
+
 # macOS
 .DS_Store
 

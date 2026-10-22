@@ -13,6 +13,7 @@ Shell scripts for downloading data, generating tiles, and running local services
 | `generate-osm-tiles.sh` | Runs Planetiler to convert OSM data into OpenMapTiles vector tiles → `squiggly.v1.base.pmtiles` |
 | `generate-contours.sh` | Upsamples DEM 3× with cubic spline, generates 20m contour lines (parallel), builds vector tiles with tippecanoe → `squiggly.v1.contours.pmtiles` |
 | `generate-terrain-tiles.sh` | Merges terrain VRT to clean GeoTIFF, encodes as RGB terrain tiles (terrarium encoding) with rio-rgbify, sets name/attribution/bounds → `squiggly.v1.terrain.pmtiles`. `RGBIFY_WORKERS=N` sets the worker count (default: Docker's CPUs) |
+| `check-terrain.py` | Checks a terrain MBTiles before conversion/upload: metadata, coverage per zoom, decoded spot heights, 256 m-boundary spike scan. Standard-library Python |
 | `test-config.sh` | Shared configuration for `--test` mode (single Bright, VIC tile) |
 | `preview.sh` | Starts a local HTTP server for the preview page. `R2_PUBLIC_URL=<url> ./scripts/preview.sh` points it at a deployed worker |
 | `upload-tiles.sh` | Uploads production `.pmtiles` archives to the R2 bucket via rclone |

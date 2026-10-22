@@ -55,6 +55,9 @@ docker compose restart martin
 ./scripts/generate-contours.sh --test
 ./scripts/generate-terrain-tiles.sh --test
 ./scripts/generate-osm-tiles.sh --test
+
+# Check a terrain build before converting/uploading (stdlib Python)
+python3 scripts/check-terrain.py datasets/tmp/australia-terrain-test.mbtiles
 ```
 
 ## Recording architectural decisions
