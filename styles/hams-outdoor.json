@@ -121,8 +121,15 @@
       "source-layer": "contours",
       "paint": {
         "line-color": "#b5651d",
-        "line-opacity": ["case", ["==", ["%", ["get", "elevation"], 100], 0], 0.6, 0.3],
-        "line-width": ["case", ["==", ["%", ["get", "elevation"], 100], 0], 1.2, 0.5]
+        "line-opacity": ["interpolate", ["linear"], ["zoom"],
+          8, 0,
+          9.5, ["case", ["==", ["%", ["get", "elevation"], 100], 0], 0.6, 0.08],
+          11, ["case", ["==", ["%", ["get", "elevation"], 100], 0], 0.6, 0.3]
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"],
+          8, ["case", ["==", ["%", ["get", "elevation"], 100], 0], 0.5, 0.2],
+          12, ["case", ["==", ["%", ["get", "elevation"], 100], 0], 1.2, 0.5]
+        ]
       }
     },
     {
