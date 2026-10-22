@@ -13,6 +13,10 @@ datasets/tmp/
 # Generated preview config (created by preview.sh from .env)
 preview/config.js
 
+# Obsidian — share the vault settings, ignore per-machine state
+.obsidian/*
+!.obsidian/app.json
+
 # macOS
 .DS_Store
 

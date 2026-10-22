@@ -1,9 +1,26 @@
+---
+tags:
+  - architecture
+  - serving
+  - worker
+  - pmtiles
+aliases:
+  - Tile serving
+  - Request path
+related:
+  - "[[CACHING]]"
+  - "[[GENERATION]]"
+  - "[[GLOSSARY]]"
+  - "[[worker/README]]"
+updated: 2026-10-22
+---
+
 # Serving
 
 How a map tile gets from a generated archive to a pixel on screen. Covers the
 data path and the URL scheme; the cache layers along that path are in
-[CACHING.md](CACHING.md), and how the archives are built in
-[GENERATION.md](GENERATION.md).
+[[CACHING]], and how the archives are built in [[GENERATION]]. Terms are in
+[[GLOSSARY]].
 
 ---
 
@@ -35,7 +52,7 @@ be pointed at either by changing only the host.
 
 The two are **not** interchangeable in one respect: Martin serves TileJSON at
 `/{source}` and tiles at `/{source}/{z}/{x}/{y}`, with no version segment. The
-worker adds one. See URL schemes below.
+worker adds one. See [[#URL schemes]].
 
 ---
 
@@ -120,12 +137,12 @@ Resolving `z/x/y`:
 
 Cold, that's three or four reads. Once the header and directories are cached the
 worker needs a single read per tile — which is why `ArchiveStore` keeps them in
-an isolate-level cache (see CACHING.md, layer 3).
+an isolate-level cache (see [[CACHING#Layer 3 — Worker isolate memory|CACHING, layer 3]]).
 
 **This structure is what made direct R2 serving attractive and then failed.**
 The format is designed to be read over HTTP Range requests straight from object
 storage, which is exactly what the old `pmtiles://` setup did. It fell over on
-cache behaviour, not on the format — see CACHING.md.
+cache behaviour, not on the format — see [[CACHING#Why the old design failed]].
 
 ---
 
@@ -183,8 +200,8 @@ What happens when MapLibre needs a tile in production:
 
 Because TileJSON is fetched once per map load and tiles are fetched continuously
 against the template it handed out, **TileJSON is where a redeploy takes effect**
-— that indirection is the whole reason the version segment works. CACHING.md
-covers the timing.
+— that indirection is the whole reason the version segment works.
+[[CACHING#What happens to a client mid-redeploy|CACHING]] covers the timing.
 
 ---
 
@@ -223,7 +240,7 @@ This is the highest-fidelity test short of production — a real browser, real
 concurrency, real CORS, real archives — and the only one that exercises MapLibre
 actually rendering. Two caveats:
 
-- **Edge caching works here** (CACHING.md, layer 2), so a second pan over the
+- **Edge caching works here** ([[CACHING#Layer 2 — The Cloudflare edge|CACHING, layer 2]]), so a second pan over the
   same area is served from cache rather than R2.
 - **CORS** is handled by the worker's `CORS_ORIGIN` var, `*` by default.
 

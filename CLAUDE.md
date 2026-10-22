@@ -73,6 +73,22 @@ Update the relevant file when a decision changes rather than appending a new one
 Code comments explain the line in front of you; `docs/` explains why the
 shape of the system is what it is.
 
+### Obsidian
+
+The repo root is an Obsidian vault, and `docs/` is written for it.
+`docs/DOCS.md` is the index; its *Conventions* section is the
+full set of rules. In short:
+
+- Link between notes with wikilinks — `[[CACHING#Layer 2 — The Cloudflare edge|layer 2]]`,
+  `[[worker/README]]` — not Markdown links. External URLs stay Markdown links.
+- Every note starts with YAML frontmatter (`tags`, `aliases`, `related`,
+  `updated`). Bump `updated` when you change a note.
+- Define a term once, in `docs/GLOSSARY.md`, and link to it.
+- Warnings, hazards and constraints go in callouts (`> [!warning]`, `> [!danger]`, …).
+- Give items other notes cite by number a block ID (`^assumption-3`).
+- Heading renames break links to them — search for `#Old heading` first.
+- `README.md` and the other GitHub-facing docs keep Markdown links.
+
 ## Keeping the docs current
 
 **Before finishing any change, check whether `README.md` or `docs/` needs

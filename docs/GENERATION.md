@@ -1,9 +1,28 @@
+---
+tags:
+  - architecture
+  - generation
+  - pipeline
+  - dem
+  - terrain
+aliases:
+  - Pipelines
+  - Tile generation
+related:
+  - "[[SERVING]]"
+  - "[[CACHING]]"
+  - "[[GLOSSARY]]"
+  - "[[scripts/SCRIPTS]]"
+  - "[[TODO]]"
+updated: 2026-10-22
+---
+
 # Generation
 
 How source data becomes the three PMTiles archives, and why each pipeline is
 shaped the way it is. The operational how-to — what to run, in what order — is in
-[README.md](../README.md); this covers the decisions behind it. Serving the
-result is [SERVING.md](SERVING.md).
+[[README]]; this covers the decisions behind it. Serving the result is
+[[SERVING]], and terms are in [[GLOSSARY]].
 
 ---
 
@@ -112,7 +131,7 @@ surface and the lines follow the terrain rather than the pixels.
 
 This is interpolation, not new information — it buys visual quality, not
 accuracy. Resampling elevation is safe here in a way it explicitly is not for
-terrain (see Pipeline 3).
+terrain (see [[#Why rio-rgbify, despite being the slowest correct option|Pipeline 3]]).
 
 ### Why per-tile, and why 8 at a time
 
@@ -136,8 +155,8 @@ consistency is recovered.
 
 Output attributes are `elevation` (metres) and `ID` (a gdal_contour serial).
 
-> **There is no `is_major` attribute.** `MAJOR_INTERVAL=100` exists in the
-> script, but `gdal_contour` is only ever passed `-a elevation`, so nothing
+> [!note] There is no `is_major` attribute.
+> `MAJOR_INTERVAL=100` exists in the script, but `gdal_contour` is only ever passed `-a elevation`, so nothing
 > generates a major/minor flag. Confirmed against the published TileJSON — the
 > layer's fields are `ID` and `elevation`. The script used to advertise
 > `is_major` in its output; that message has been corrected. Style index
@@ -180,7 +199,7 @@ for hillshade and 3D terrain.
 This was benchmarked properly (March 2026, Eastern Seaboard subset, 69 DEM tiles,
 z0–12, 16,805 tiles). The constraint that decides it:
 
-> **Terrarium is a base-256 number, so resampling the encoded RGB breaks it.**
+> [!important] Terrarium is a base-256 number, so resampling the encoded RGB breaks it.
 > Averaging R, G and B independently is meaningless at every 256 m boundary where
 > G wraps 255→0 and R increments. The carry relationship is destroyed and the
 > error reaches 128 m — visible as spikes along contour lines. The only correct
@@ -208,16 +227,6 @@ Two conclusions worth keeping:
 
 The bottleneck is entirely tile encoding and PNG writing, not the warp.
 
-Output: z0–12 (~38 m/pixel at z12, roughly matching the 30 m source).
-
-> **Terrain metadata is wrong and it isn't cosmetic.** The archive declares
-> global bounds (`-180,-85 → 180,85`) when it covers Australia, carries an empty
-> `name`, and has **no `attribution`** — despite Copernicus requiring attribution.
-> Contours get theirs from tippecanoe's `--attribution` flag; rio-rgbify has no
-> equivalent, so nothing sets it. Clients that render attribution automatically
-> from TileJSON will show nothing for terrain. Fixable at the pmtiles-convert
-> step; not yet done.
-
 ---
 
 ## Test mode
@@ -230,7 +239,7 @@ separate toggleable layers in the preview page.
 This turns hours into minutes and is the only sane way to iterate on pipeline
 parameters. It is also what the worker's test suite runs against — the `-test`
 archives are real PMTiles files, so parsing, directory traversal and the
-`EtagMismatch` retry are genuinely exercised (see `worker/README.md`).
+`EtagMismatch` retry are genuinely exercised (see [[worker/README|worker/README.md]]).
 
 The one thing test archives cannot reproduce: they are small enough to upload to
 R2 in a single part, so they get plain MD5 ETags. Production archives are
@@ -249,7 +258,7 @@ derived from.
 
 All three are resumable only to the extent noted above — contours skip completed
 tiles, the other two restart. Re-running any pipeline changes the archive bytes,
-hence its R2 ETag, hence every tile URL it serves; see SERVING.md.
+hence its R2 ETag, hence every tile URL it serves; see [[CACHING#Versioning and redeploys]].
 
 ---
 

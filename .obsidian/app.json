@@ -1,0 +1,13 @@
+{
+  "userIgnoreFilters": [
+    "worker/node_modules/",
+    "worker/.wrangler/",
+    "datasets/sources/",
+    "datasets/tmp/",
+    "tiles/",
+    ".claude/"
+  ],
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
+  "alwaysUpdateLinks": true
+}

@@ -7,11 +7,17 @@ A local-first map tiling backend for a paragliding tracking service. Generates a
 | Where | What |
 |---|---|
 | This README | What to run, in what order, and what you get |
+| [docs/DOCS.md](docs/DOCS.md) | Index to the design notes — start here |
 | [docs/GENERATION.md](docs/GENERATION.md) | How the archives are built and why each pipeline is shaped that way |
 | [docs/SERVING.md](docs/SERVING.md) | How a tile reaches the screen — formats, URL schemes, request path |
-| [docs/CACHING.md](docs/CACHING.md) | The four cache layers, versioning, and the HTTP terminology behind them |
+| [docs/CACHING.md](docs/CACHING.md) | The four cache layers, versioning and redeploys |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Terms used across the design notes |
 | [worker/README.md](worker/README.md) | Cloudflare Worker layout, config and deployment |
 | [scripts/SCRIPTS.md](scripts/SCRIPTS.md) | One-line summary of every script |
+
+The `docs/` notes are written for [Obsidian](https://obsidian.md/): open
+the repo folder as a vault and the `[[wikilinks]]` between them work, with hover
+previews and backlinks. On GitHub those links show as plain text.
 
 ## Prerequisites
 
@@ -100,9 +106,11 @@ pgtiler/
 │   ├── wrangler.toml                    # dev + production environments
 │   └── README.md                        # Worker docs
 ├── docs/                                # Design decisions
+│   ├── DOCS.md                           # Index — start here
 │   ├── GENERATION.md                    # How the archives are built, and why
 │   ├── SERVING.md                       # How tiles reach the screen
-│   └── CACHING.md                       # The four cache layers
+│   ├── CACHING.md                       # The four cache layers
+│   └── GLOSSARY.md                       # Terms used across the notes
 ├── scripts/
 │   ├── init.sh                          # Download all datasets
 │   ├── download-osm-base-vectors.sh     # Download Australia OSM extract

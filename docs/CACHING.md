@@ -1,138 +1,44 @@
+---
+tags:
+  - architecture
+  - caching
+  - worker
+  - cloudflare
+aliases:
+  - Cache layers
+related:
+  - "[[SERVING]]"
+  - "[[GENERATION]]"
+  - "[[GLOSSARY]]"
+  - "[[worker/README]]"
+updated: 2026-10-22
+---
+
 # Caching
 
 How a tile request is cached on its way from R2 to a browser, what each layer
 does, and which parts of this are verified versus assumed. How the archives are
-built is [GENERATION.md](GENERATION.md); how a tile reaches the screen is
-[SERVING.md](SERVING.md).
+built is [[GENERATION]]; how a tile reaches the screen is [[SERVING]]. Terms are
+defined in [[GLOSSARY]] — hover any link to preview it.
 
-The short version: the PMTiles archives are 1.2–4.8 GB, which is far too large
-for Cloudflare to cache. Serving them directly meant every request travelled the
-full distance to R2. The fix is a Worker that opens the archive server-side and
-returns one small, individually cacheable response per tile, at a URL that
-changes whenever the archive does.
+> [!abstract] The short version
+> The PMTiles archives are 1.2–4.8 GB, which is far too large
+> for Cloudflare to cache. Serving them directly meant every request travelled the
+> full distance to R2. The fix is a Worker that opens the archive server-side and
+> returns one small, individually cacheable response per tile, at a URL that
+> changes whenever the archive does.
 
 ---
 
 ## Terminology
 
-You can skip this if the words are already familiar, but the rest of the document
-leans on them heavily.
-
-### ETag
-
-An **ETag** ("entity tag") is a short string a server attaches to a response to
-identify *this exact version of this exact resource*. It's opaque — the client
-never interprets it, only compares it for equality.
-
-```http
-ETag: "d41d8cd98f00b204e9800998ecf8427e"
-```
-
-Its normal job is to save bandwidth. A browser that already has a copy can ask
-"has this changed since the version tagged X?" and get back a tiny `304 Not
-Modified` instead of the whole body.
-
-What matters for us is a property of how **R2 computes** them: R2 derives the
-ETag from the object's *contents*. For an object uploaded in one shot it's the
-MD5 hash of the bytes. For a multipart upload — which anything over a few
-hundred megabytes will be — it's the MD5 of the concatenated part MD5s, followed
-by a dash and the part count:
-
-```
-a3f1c9e40b7d2856f0918ab3cd4e7f21-72
-```
-
-So the ETag is *already a content hash*. We don't have to compute or track a
-version ourselves: re-upload an archive, and its ETag changes. That single fact
-is what the whole versioning scheme rests on.
-
-Note the two forms in the Workers API: `R2Object.etag` is the bare value,
-`R2Object.httpEtag` is the same thing wrapped in quotes for use in a header.
-
-### Fresh, stale, and revalidation
-
-A cached response is **fresh** for a period set by the server. While fresh, a
-cache serves it with no network contact at all.
-
-When that period expires the response becomes **stale**. Stale does *not* mean
-deleted — the bytes are still there. It means the cache won't serve them without
-checking first. That check is a **conditional request**: the cache re-requests
-the resource with an `If-None-Match: "<etag>"` header, meaning "only send a body
-if it differs from this version." The server replies either `200` with fresh
-content, or `304 Not Modified` with no body at all, which tells the cache to keep
-what it has and reset the freshness clock.
-
-**Revalidation** is that round trip. It's cheap, but it's still a round trip.
-
-### Cache-Control
-
-The header that sets all of the above. The pieces we use:
-
-| Directive | Meaning |
-|---|---|
-| `public` | Any cache may store this, including shared ones like a CDN. |
-| `max-age=N` | Fresh for N seconds. |
-| `immutable` | Never revalidate while fresh — *even if the user hits reload*. |
-| `stale-while-revalidate=N` | Once stale, serve the old copy immediately for N more seconds while fetching a replacement in the background. |
-| `s-maxage=N` | Overrides `max-age`, but only for shared caches. Not currently used here. |
-
-`max-age` is always a **ceiling, not a guarantee**. Caches are finite and evict
-under pressure, so a response can vanish long before it expires. You can rely on
-"at most this long," never "at least this long."
-
-`immutable` is the interesting one. Normally a browser refresh forces
-revalidation of everything on the page regardless of `max-age`. `immutable`
-suppresses that. It's only honest when the URL genuinely cannot change meaning —
-which is what the version segment buys us.
-
-### Age
-
-When a shared cache serves something it has been holding, it adds an `Age`
-header saying how many seconds it has had it. Downstream caches subtract that
-from `max-age`. A tile with `max-age=31536000` that sat at the edge for a month
-arrives at the browser with about eleven months of freshness left, not twelve.
-The budget is shared across the whole chain, not restarted at each hop.
-
-### Cache key
-
-What a cache uses to decide whether two requests are "the same request." By
-default it's essentially the URL. **This is the crux of the original bug:** the
-cache key does *not* include the `Range` header, so two requests for different
-byte ranges of the same file look identical to the cache.
-
-### Content-addressed URL
-
-A URL whose path contains a hash of the content it returns. Because the content
-can't change without the URL changing, such a URL can be cached forever. Updating
-means publishing at a *new* URL rather than invalidating the old one — the
-difference between "everyone must forget what they know" and "everyone naturally
-starts asking for something else."
-
-### Range request
-
-An HTTP request for part of a file:
-
-```http
-Range: bytes=0-16383
-```
-
-The server answers `206 Partial Content` with just those bytes. This is how the
-PMTiles format is designed to be read over a network — seek to the header, seek
-to a directory, seek to the tile — without downloading the archive.
-
-### PoP / colo
-
-Cloudflare's edge locations. A **PoP** (point of presence), also called a
-**colo** (colocation facility), is one physical data centre. There are hundreds
-worldwide, and each maintains its own cache storage.
-
-### Isolate
-
-The lightweight sandbox a Worker runs in — a V8 isolate, much cheaper than a
-container. Cloudflare spins up many of them, per PoP, and discards them freely.
-Any state a Worker holds in a module-level variable lives only in *one* isolate,
-is not shared with others, and disappears when that isolate is recycled. This
-matters below.
+> [!info] Definitions live in [[GLOSSARY]]
+> This note leans on [[GLOSSARY#ETag|ETag]],
+> [[GLOSSARY#Fresh, stale, and revalidation|fresh / stale / revalidation]],
+> [[GLOSSARY#Cache-Control|Cache-Control]], [[GLOSSARY#Age|Age]],
+> [[GLOSSARY#Cache key|cache key]], [[GLOSSARY#Content-addressed URL|content-addressed URL]],
+> [[GLOSSARY#Range request|Range request]], [[GLOSSARY#PoP (colo)|PoP]] and
+> [[GLOSSARY#Isolate|isolate]]. Hover a link to preview the definition.
 
 ---
 
@@ -153,7 +59,7 @@ Per user, on their disk. Governed entirely by the `Cache-Control` we send.
 | Response | What we send | Why |
 |---|---|---|
 | Tile at the current version | `public, max-age=31536000, immutable` | URL is content-addressed; it can never mean anything else. |
-| Tile at a superseded/absent version | `public, max-age=60, stale-while-revalidate=300` | URL no longer describes its bytes — see below. |
+| Tile at a superseded/absent version | `public, max-age=60, stale-while-revalidate=300` | URL no longer describes its bytes — see [[#What happens to a client mid-redeploy]]. |
 | TileJSON | `public, max-age=300, stale-while-revalidate=3600` | The one document that must change. |
 
 ### Layer 2 — The Cloudflare edge
@@ -162,7 +68,7 @@ Two distinct things share this layer, and conflating them causes confusion.
 
 **The automatic CDN cache** is what Cloudflare does on its own for ordinary
 origin traffic. *We are not using it.* Responses a Worker builds itself are not
-automatically cached by Cloudflare — see Assumption 3.
+automatically cached by Cloudflare — see [[#^assumption-3|Assumption 3]].
 
 **The Cache API** (`caches.default`) is edge storage the Worker writes to
 explicitly. `handleTile` calls `cache.match()` on the way in and `cache.put()` on
@@ -283,9 +189,10 @@ guarded by `onlyIf: { etagMatches }`; when the object has changed the guard
 fails, pmtiles catches the resulting `EtagMismatch`, invalidates its directory
 cache, and transparently re-reads the **new** archive.
 
-The trap: an isolate in that window would judge a request at the *old* version to
-be "current" and stamp it `immutable`, while serving *new* bytes — pinning the
-mismatch for a year in browsers and at every PoP that saw it.
+> [!danger] The trap
+> An isolate in that window would judge a request at the *old* version to
+> be "current" and stamp it `immutable`, while serving *new* bytes — pinning the
+> mismatch for a year in browsers and at every PoP that saw it.
 
 So cache lifetime is decided from `R2Source.lastEtag` — the ETag of the read that
 actually produced the bytes — never from the memoised value
@@ -302,7 +209,7 @@ because some are inferred rather than measured.
 **1. Cloudflare will not cache objects above ~512 MB** (5 GB on Enterprise).
 *Confidence: high — documented behaviour.* This is the primary justification for
 the Worker. It should be re-checked if the plan changes, though the design is
-better regardless of limits.
+better regardless of limits. ^assumption-1
 
 **2. R2 ETags are S3-compatible content hashes.**
 *Confidence: high for the property we need, medium for the exact format.* We rely
@@ -310,29 +217,29 @@ only on **ETag changes if and only if the object changes** — not on the specif
 algorithm. One consequence of the multipart format: the ETag depends on chunk
 size as well as content, so re-uploading identical bytes with a different
 `--s3-chunk-size` yields a new version code. That costs a cache refill, nothing
-worse. `upload-tiles.sh` pins 64M.
+worse. `upload-tiles.sh` pins 64M. ^assumption-2
 
 **3. Worker-synthesized responses are not automatically edge-cached.**
 *Confidence: medium-high.* Only `cache.put()` puts anything at the edge. If this
 is wrong, TileJSON could be cached longer than intended and redeploys would
 propagate more slowly — the observable symptom would be `Age` headers appearing
 on TileJSON responses. Related: **do not** add a Cloudflare Cache Rule matching
-`/*.json` on this route; it would undermine the propagation mechanism.
+`/*.json` on this route; it would undermine the propagation mechanism. ^assumption-3
 
 **4. The Cache API is per-PoP with no global tier.**
 *Confidence: high.* Tiered Cache and Cache Reserve apply to `fetch()` subrequests
 against an origin, not to Cache API writes. Consequence is duplicated R2 reads
-across PoPs — acceptable for Australia-centric traffic.
+across PoPs — acceptable for Australia-centric traffic. ^assumption-4
 
 **5. Cloudflare may fill a Range miss by fetching the whole object.**
 *Confidence: low — inferred from the observed symptom, not measured.* This is our
 best explanation for the occasional full-archive responses under the old setup.
 The Worker makes it moot either way, since browsers no longer issue Range
-requests at all.
+requests at all. ^assumption-5
 
 **6. R2 binding reads bypass the CDN cache and incur no egress charge.**
 *Confidence: high.* Worker↔R2 traffic within Cloudflare's network is billed as
-operations, not bandwidth.
+operations, not bandwidth. ^assumption-6
 
 ### Verified in this repo
 
@@ -342,7 +249,7 @@ Confirmed by running the Worker against a local R2 emulation:
 - A tile at the current version returns `immutable`; a wrong or absent version
   returns `max-age=60`.
 - Repeat requests report `X-Tile-Cache: hit`.
-- Tile bytes are served uncompressed (see SERVING.md → Compression); absent
+- Tile bytes are served uncompressed (see [[SERVING#Compression]]); absent
   tiles return `204`.
 - Swapping the object underneath a warm isolate and immediately requesting the
   old version returns `max-age=60`, not `immutable` — the stale-isolate fix.
@@ -352,8 +259,8 @@ Confirmed by running the Worker against a local R2 emulation:
 ## Hazard: a bad deploy pins itself for a year
 
 `immutable, max-age=31536000` is only safe while the bytes under a version URL
-are correct. If a deploy serves *wrong* bytes — the `Content-Encoding` bug in
-SERVING.md did exactly this — every tile requested during that window is cached
+are correct. If a deploy serves *wrong* bytes — the [[SERVING#Compression|`Content-Encoding` bug]]
+did exactly this — every tile requested during that window is cached
 at the edge, and in browsers, under a URL that will not change until the archive
 is re-uploaded and its ETag moves. Fixing the code does not evict them.
 
@@ -389,7 +296,7 @@ curl -sD- -o/dev/null https://maps.tweed.nz/squiggly.v1.base/<version>/8/234/151
 - `X-Tile-Version` differing from the version in the URL → you're mid-redeploy,
   or a client is holding stale TileJSON. Expected; should resolve within minutes.
 - An `Age` header on TileJSON → something is edge-caching it that shouldn't be.
-  See Assumption 3.
+  See [[#^assumption-3|Assumption 3]].
 
 ## Open questions
 
